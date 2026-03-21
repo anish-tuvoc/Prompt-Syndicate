@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { getEventById } from "../EventDetailPage/service";
+import { getEventByIdFromApi } from "../EventDetailPage/service";
 import { BookingHeader } from "../../components/booking/BookingHeader";
 import { MovieTheaterLayout } from "../../components/booking/MovieTheaterLayout";
 import { MovieCategoryPanel } from "../../components/booking/MovieCategoryPanel";
@@ -25,26 +25,41 @@ import type {
   StadiumBlock,
   EventTicketCategory,
 } from "./type";
+import type { EventData } from "../../data/events";
 
 export function BookingPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const event = useMemo(() => getEventById(id ?? ""), [id]);
+  const [event, setEvent] = useState<EventData | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    getEventByIdFromApi(id).then((ev) => {
+      setEvent(ev);
+    });
+  }, [id]);
 
   // ── MOVIE state ───────────────────────────────────────────────────────
   // All 12 rows generated upfront; no section drill-down needed
   const [movieRows, setMovieRows] = useState<FullMovieRow[]>([]);
-  const [selectedMovieCategory, setSelectedMovieCategory] = useState<string | null>(null);
-  const [movieSelectedSeatIds, setMovieSelectedSeatIds] = useState<Set<string>>(new Set());
+  const [selectedMovieCategory, setSelectedMovieCategory] = useState<
+    string | null
+  >(null);
+  const [movieSelectedSeatIds, setMovieSelectedSeatIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // ── SPORTS state ──────────────────────────────────────────────────────
   const [stadiumBlocks, setStadiumBlocks] = useState<StadiumBlock[]>([]);
   const [sportsSections, setSportsSections] = useState<SectionData[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SectionData | null>(null);
-  const [sectionSeatsCache, setSectionSeatsCache] = useState<Record<string, SectionSeat[]>>({});
-  const [sportsSelectedSeatIds, setSportsSelectedSeatIds] = useState<Set<string>>(new Set());
+  const [sectionSeatsCache, setSectionSeatsCache] = useState<
+    Record<string, SectionSeat[]>
+  >({});
+  const [sportsSelectedSeatIds, setSportsSelectedSeatIds] = useState<
+    Set<string>
+  >(new Set());
 
   // ── EVENT / CONCERT state ─────────────────────────────────────────────
   const [tickets, setTickets] = useState<EventTicketCategory[]>([]);
@@ -73,14 +88,16 @@ export function BookingPage() {
     if (!activeSection || !event) return;
     if (sectionSeatsCache[activeSection.id]) return;
     const price =
-      event.priceCategories.find((c) => c.id === activeSection.categoryId)?.price ?? 0;
+      event.priceCategories.find((c) => c.id === activeSection.categoryId)
+        ?.price ?? 0;
     const seats = generateSectionSeats(activeSection, price, event.id);
     setSectionSeatsCache((prev) => ({ ...prev, [activeSection.id]: seats }));
   }, [activeSection, event, sectionSeatsCache]);
 
   // ── Derived values ────────────────────────────────────────────────────
-  const currentSectionSeats: SectionSeat[] =
-    activeSection ? (sectionSeatsCache[activeSection.id] ?? []) : [];
+  const currentSectionSeats: SectionSeat[] = activeSection
+    ? (sectionSeatsCache[activeSection.id] ?? [])
+    : [];
 
   const allCachedSportsSeats = useMemo(
     () => Object.values(sectionSeatsCache).flat(),
@@ -182,7 +199,10 @@ export function BookingPage() {
     setTickets((prev) =>
       prev.map((t) => {
         if (t.id !== ticketId) return t;
-        const qty = Math.max(0, Math.min(t.maxPerBooking, t.available, t.quantity + delta));
+        const qty = Math.max(
+          0,
+          Math.min(t.maxPerBooking, t.available, t.quantity + delta),
+        );
         return { ...t, quantity: qty };
       }),
     );
@@ -225,7 +245,11 @@ export function BookingPage() {
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         </motion.div>
 
@@ -236,10 +260,13 @@ export function BookingPage() {
         >
           <h2 className="text-2xl font-bold text-white">Booking Confirmed!</h2>
           <p className="mt-2 text-slate-400">{event.title}</p>
-          <p className="mt-1 text-2xl font-bold text-brand-400">{formatPrice(totalPrice)}</p>
+          <p className="mt-1 text-2xl font-bold text-brand-400">
+            {formatPrice(totalPrice)}
+          </p>
           {event.type !== "event" && summarySeats.length > 0 && (
             <p className="mt-2 text-sm text-slate-400">
-              Seats: {summarySeats.map((s) => `${s.rowLabel}${s.colIndex}`).join(", ")}
+              Seats:{" "}
+              {summarySeats.map((s) => `${s.rowLabel}${s.colIndex}`).join(", ")}
             </p>
           )}
           {event.type === "event" && (
@@ -284,7 +311,6 @@ export function BookingPage() {
 
         <div className="flex-1 overflow-auto pb-28">
           <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
-
             {/* ════════════════════════════════════════════════
                 MOVIE — full theater always visible
                 Left: category filter panel
@@ -292,7 +318,6 @@ export function BookingPage() {
             ════════════════════════════════════════════════ */}
             {event.type === "movie" && (
               <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-
                 {/* Left panel: category filter */}
                 <aside className="lg:sticky lg:top-6 lg:h-fit">
                   <MovieCategoryPanel
@@ -317,7 +342,11 @@ export function BookingPage() {
                       >
                         <motion.div
                           animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
                           className="h-8 w-8 rounded-full border-2 border-brand-500 border-t-transparent"
                         />
                       </motion.div>
@@ -351,7 +380,9 @@ export function BookingPage() {
                                 </p>
                                 <button
                                   type="button"
-                                  onClick={() => handleMovieCategorySelect(null)}
+                                  onClick={() =>
+                                    handleMovieCategorySelect(null)
+                                  }
                                   className="text-[10px] text-slate-400 hover:text-white transition-colors"
                                 >
                                   Clear filter ×
@@ -382,7 +413,6 @@ export function BookingPage() {
             ════════════════════════════════════════════════ */}
             {event.type === "sports" && (
               <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-
                 {/* Left panel: sports category accordion */}
                 <aside className="lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100vh-130px)] lg:overflow-y-auto lg:pr-1">
                   <CategoryAccordion
@@ -391,14 +421,15 @@ export function BookingPage() {
                     activeCategoryId={activeCategoryId}
                     activeSectionId={activeSection?.id ?? null}
                     onToggleCategory={handleToggleSportsCategory}
-                    onSelectSection={(section) => handleSelectSportsSection(section)}
+                    onSelectSection={(section) =>
+                      handleSelectSportsSection(section)
+                    }
                   />
                 </aside>
 
                 {/* Right panel */}
                 <main className="min-h-[480px]">
                   <AnimatePresence mode="wait">
-
                     {/* Stadium map overview — shown when no section is selected */}
                     {!activeSection && (
                       <motion.div
@@ -410,7 +441,8 @@ export function BookingPage() {
                         className="flex flex-col items-center gap-3"
                       >
                         <p className="text-sm text-slate-400">
-                          Select a category on the left, then click a block to see seats
+                          Select a category on the left, then click a block to
+                          see seats
                         </p>
                         <StadiumLayout
                           blocks={stadiumBlocks}
@@ -430,7 +462,10 @@ export function BookingPage() {
                         initial={{ opacity: 0, x: 30 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{
+                          duration: 0.35,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
                       >
                         {/* Back-to-map control */}
                         <div className="mb-4 flex items-center justify-between">
@@ -468,7 +503,11 @@ export function BookingPage() {
                           <div className="flex h-60 items-center justify-center">
                             <motion.div
                               animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              transition={{
+                                duration: 1,
+                                repeat: Infinity,
+                                ease: "linear",
+                              }}
                               className="h-8 w-8 rounded-full border-2 border-brand-500 border-t-transparent"
                             />
                           </div>
@@ -493,15 +532,19 @@ export function BookingPage() {
             {event.type === "event" && (
               <div className="mx-auto max-w-2xl">
                 <div className="mb-6">
-                  <h2 className="text-xl font-bold text-white">Choose your tickets</h2>
+                  <h2 className="text-xl font-bold text-white">
+                    Choose your tickets
+                  </h2>
                   <p className="mt-1 text-sm text-slate-400">
                     {event.venue} · {event.date}
                   </p>
                 </div>
-                <TicketSelector tickets={tickets} onUpdate={handleTicketUpdate} />
+                <TicketSelector
+                  tickets={tickets}
+                  onUpdate={handleTicketUpdate}
+                />
               </div>
             )}
-
           </div>
         </div>
 

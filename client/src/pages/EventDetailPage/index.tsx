@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import { EventCard } from "../../components/EventCard";
 import { cardVariants } from "../../components/cardVariants";
-import { getEventById, getRelatedEvents } from "./service";
+import { getEventByIdFromApi, getRelatedEventsFromApi } from "./service";
+import type { EventData } from "../../data/events";
 
 const relatedContainerVariants: Variants = {
   hidden: {},
@@ -53,9 +54,30 @@ function InfoPill({ icon, children }: { icon: React.ReactNode; children: React.R
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [related, setRelated] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const event = useMemo(() => getEventById(id ?? ""), [id]);
-  const related = useMemo(() => getRelatedEvents(id ?? ""), [id]);
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    Promise.all([
+      getEventByIdFromApi(id),
+      getRelatedEventsFromApi(id),
+    ]).then(([ev, rel]) => {
+      setEvent(ev);
+      setRelated(rel);
+      setLoading(false);
+    });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!event) {
     return (
