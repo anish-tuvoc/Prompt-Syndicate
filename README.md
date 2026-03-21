@@ -48,11 +48,14 @@ That's it. The database auto-creates tables and seeds:
 - 10 sample events
 - Admin user (`username: admin`, `password: admin`)
 
+To use the admin panel, go to `/auth`, switch to **admin auth**, sign in with `admin/admin`, then open `/admin`.
+
 ### Access Points
 
 | Service | URL |
 |---------|-----|
 | Frontend | [http://localhost:5174](http://localhost:5174) |
+| Admin Panel | [http://localhost:5174/admin](http://localhost:5174/admin) |
 | Backend API | [http://localhost:8001](http://localhost:8001) |
 | Swagger Docs | [http://localhost:8001/docs](http://localhost:8001/docs) |
 
