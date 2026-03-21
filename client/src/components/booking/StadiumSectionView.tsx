@@ -1,76 +1,127 @@
 import { motion } from "framer-motion";
 import type { SectionData, SectionSeat } from "../../pages/BookingPage/type";
 
-// ── SVG canvas ─────────────────────────────────────────────────────────────
-const SVG_W = 440;
-const SVG_H = 320;
-const ARC_CX = SVG_W / 2; // 220
+// ── Polar layout — seats arc around the pitch (centre) ───────────────────────
+//
+//  • Pitch sits at the exact SVG centre (CX, CY).
+//  • Rows A–H are concentric circular arcs at increasing radii from the pitch.
+//  • Seats are positioned at their TRUE angular location on the stadium ring
+//    (blockAngle = midpoint of the block on the ring, 0°=top, clockwise).
+//  • A fixed 72° visual span is used so seats are always comfortably spaced.
+//  • Row labels are placed just past the clockwise edge of each row's arc.
+//  • The mini-compass shows "you are here" with an arrow pointing to the pitch.
 
-// Arc center is BELOW the SVG — this is the "pitch direction".
-// Rows positioned on arcs around this center:
-//   inner row (A) has smallest R → sits at BOTTOM of SVG (closest to pitch)
-//   outer row (H) has largest  R → sits at TOP of SVG   (farthest from pitch)
-const ARC_CY = SVG_H + 120; // 440 — 120px below the SVG bottom
+const SVG_SIZE = 460;
+const CX = SVG_SIZE / 2; // 230
+const CY = SVG_SIZE / 2; // 230
 
-// ── Seat dimensions ────────────────────────────────────────────────────────
-const SEAT_W = 14;
-const SEAT_H = 11;
-const SEAT_RX = 2;
+const PITCH_R      = 44;   // green pitch circle radius
+const OUTER_WALL_R = 218;  // faint outer boundary ring
 
-// ── Row configuration (A = inner/bottom, H = outer/top) ───────────────────
-// R:         arc radius (130 inner → 390 outer)
-// seatCount: seats per row (8 inner → 15 outer) — WIDER outer rows
-// theta:     half-angle in radians — derived from target physical width
-interface RowConfig {
-  label: string;
-  R: number;
-  seatCount: number;
-  theta: number; // radians
+const R_INNER = 92;  // Row A radius (closest to pitch)
+const R_OUTER = 202; // Row H radius (farthest from pitch)
+
+// Fixed visual angular span — independent of actual block width.
+// 72° gives comfortable seat spacing for all tier types.
+const VIEW_HALF_DEG = 36;
+
+const ROW_SEAT_COUNTS = [8, 9, 10, 11, 12, 13, 14, 15]; // Row A → H
+const ROW_LABELS      = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Clock-degrees (0=top, CW) → SVG math radians
+function toRad(clockDeg: number): number {
+  return ((clockDeg - 90) * Math.PI) / 180;
 }
 
-const ROW_CONFIGS: RowConfig[] = (() => {
-  const configs: RowConfig[] = [];
-  for (let i = 0; i < 8; i++) {
-    const t = i / 7; // 0 (inner) → 1 (outer)
-    const R = 130 + t * 260; // 130 → 390
-    const seatCount = 8 + i; // 8 → 15
-
-    // Target physical half-width: 58px (inner row A) → 158px (outer row H)
-    // Outer rows span more of the SVG width — realistic stadium geometry
-    const targetHalfWidth = 58 + t * 100;
-    const theta = Math.asin(Math.min(0.97, targetHalfWidth / R));
-
-    configs.push({
-      label: String.fromCharCode(65 + i), // A–H
-      R,
-      seatCount,
-      theta,
-    });
-  }
-  return configs;
-})();
-
-// ── Arc seat position ──────────────────────────────────────────────────────
-// Seats are placed along the arc from −theta to +theta.
-// The EDGE seats are lower on screen (closer to pitch at bottom) — "∩" curve.
-// This is geometrically correct: the ends of each stadium row are physically
-// closer to the pitch line than the center seat.
-function seatPos(cfg: RowConfig, seatIdx: number) {
-  const { R, seatCount, theta } = cfg;
-  const angle =
-    seatCount > 1 ? -theta + (seatIdx / (seatCount - 1)) * 2 * theta : 0;
-  return {
-    x: ARC_CX + R * Math.sin(angle) - SEAT_W / 2,
-    y: ARC_CY - R * Math.cos(angle) - SEAT_H / 2,
-  };
+function rowRadius(rowIdx: number): number {
+  return R_INNER + (rowIdx / 7) * (R_OUTER - R_INNER); // 92 → 202
 }
 
-// Row label x position (to the left of the leftmost seat)
-function rowLabelX(cfg: RowConfig): number {
-  return ARC_CX - cfg.R * Math.sin(cfg.theta) - SEAT_W / 2 - 14;
+function seatCircleR(rowIdx: number): number {
+  return 4.5 + (rowIdx / 7) * 2; // 4.5 → 6.5 px
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
+// (x, y) for a seat at the given row and seat index
+function polarPos(rowIdx: number, seatIdx: number, seatCount: number, blockAngle: number) {
+  const R = rowRadius(rowIdx);
+  const startClk = blockAngle - VIEW_HALF_DEG;
+  const clkAngle  =
+    seatCount > 1
+      ? startClk + (seatIdx / (seatCount - 1)) * (2 * VIEW_HALF_DEG)
+      : blockAngle;
+  const r = toRad(clkAngle);
+  return { x: CX + R * Math.cos(r), y: CY + R * Math.sin(r) };
+}
+
+// SVG arc path (clockwise, single radius)
+function arcPath(R: number, startClk: number, endClk: number): string {
+  const s = toRad(startClk), e = toRad(endClk);
+  const large = endClk - startClk > 180 ? 1 : 0;
+  const x1 = (CX + R * Math.cos(s)).toFixed(1);
+  const y1 = (CY + R * Math.sin(s)).toFixed(1);
+  const x2 = (CX + R * Math.cos(e)).toFixed(1);
+  const y2 = (CY + R * Math.sin(e)).toFixed(1);
+  return `M${x1},${y1} A${R},${R} 0 ${large},1 ${x2},${y2}`;
+}
+
+// Filled sector (annular wedge) between two radii
+function sectorPath(innerR: number, outerR: number, startClk: number, endClk: number): string {
+  const s = toRad(startClk), e = toRad(endClk);
+  const large = endClk - startClk > 180 ? 1 : 0;
+  const ix1 = (CX + innerR * Math.cos(s)).toFixed(1);
+  const iy1 = (CY + innerR * Math.sin(s)).toFixed(1);
+  const ix2 = (CX + innerR * Math.cos(e)).toFixed(1);
+  const iy2 = (CY + innerR * Math.sin(e)).toFixed(1);
+  const ox1 = (CX + outerR * Math.cos(s)).toFixed(1);
+  const oy1 = (CY + outerR * Math.sin(s)).toFixed(1);
+  const ox2 = (CX + outerR * Math.cos(e)).toFixed(1);
+  const oy2 = (CY + outerR * Math.sin(e)).toFixed(1);
+  return [
+    `M${ix1},${iy1}`,
+    `A${innerR},${innerR} 0 ${large},1 ${ix2},${iy2}`,
+    `L${ox2},${oy2}`,
+    `A${outerR},${outerR} 0 ${large},0 ${ox1},${oy1}`,
+    "Z",
+  ].join(" ");
+}
+
+// Text rotation that stays upright (not upside-down) at any clock angle
+function readableRot(clockAngle: number): number {
+  let t = ((( clockAngle - 90) % 360) + 360) % 360;
+  if (t > 90 && t < 270) t -= 180;
+  return t;
+}
+
+// ── Mini compass ──────────────────────────────────────────────────────────────
+function SectionCompass({ blockAngle }: { blockAngle: number }) {
+  const cx = 30, cy = 30, ringR = 22, dotR = 5.5;
+  const rad = toRad(blockAngle);
+  const dotX = cx + ringR * Math.cos(rad);
+  const dotY = cy + ringR * Math.sin(rad);
+  return (
+    <svg viewBox="0 0 60 60" width={52} height={52} className="shrink-0"
+      aria-label="Your position on the stadium">
+      <circle cx={cx} cy={cy} r={ringR + 5}
+        fill="none" stroke="#374151" strokeWidth={8} />
+      <ellipse cx={cx} cy={cy} rx={7} ry={6} fill="#166534" />
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
+        fontSize="4" fontWeight="bold" fill="rgba(255,255,255,0.6)" letterSpacing="0.5">
+        GND
+      </text>
+      <circle cx={dotX} cy={dotY} r={dotR} fill="#F59E0B" />
+      <line
+        x1={dotX} y1={dotY}
+        x2={cx + (dotX - cx) * 0.45}
+        y2={cy + (dotY - cy) * 0.45}
+        stroke="#F59E0B" strokeWidth={1.5} strokeLinecap="round" opacity={0.7}
+      />
+    </svg>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 interface StadiumSectionViewProps {
   section: SectionData;
   seats: SectionSeat[];
@@ -84,124 +135,166 @@ export function StadiumSectionView({
   selectedSeatIds,
   onToggleSeat,
 }: StadiumSectionViewProps) {
-  // Group seats by row label
+  const blockAngle = section.angle ?? 180;
+
   const seatsByRow = new Map<string, SectionSeat[]>();
   for (const s of seats) {
-    const row = seatsByRow.get(s.rowLabel) ?? [];
-    row.push(s);
-    seatsByRow.set(s.rowLabel, row);
+    const arr = seatsByRow.get(s.rowLabel) ?? [];
+    arr.push(s);
+    seatsByRow.set(s.rowLabel, arr);
   }
 
-  const totalAvail = seats.filter((s) => s.status === "available").length;
+  const totalAvail    = seats.filter((s) => s.status === "available").length;
   const totalSelected = seats.filter((s) => selectedSeatIds.has(s.id)).length;
-  const totalBooked = seats.filter((s) => s.status === "booked").length;
+  const totalBooked   = seats.filter((s) => s.status === "booked").length;
+
+  // Angular range of the view
+  const startClk = blockAngle - VIEW_HALF_DEG;
+  const endClk   = blockAngle + VIEW_HALF_DEG;
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Header */}
-      <div className="text-center">
-        <h3 className="text-sm font-bold text-white">{section.label}</h3>
-        <p className="mt-0.5 text-[10px] text-slate-400">
-          Row A = closest to pitch · {totalAvail} available · {totalSelected} selected
-        </p>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 rounded-xl bg-slate-800/60 px-4 py-2.5 ring-1 ring-slate-700/40">
+        <SectionCompass blockAngle={blockAngle} />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-white">{section.label}</p>
+          <p className="text-[10px] text-slate-400">Row A = nearest pitch · Row H = outer</p>
+          <p className="mt-0.5 text-[10px] text-slate-400">
+            {totalAvail} available &middot; {totalSelected} selected
+          </p>
+        </div>
+        <div className="ml-auto flex flex-col items-center gap-0.5">
+          <span className="text-lg leading-none text-emerald-400">⬤</span>
+          <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-400">Pitch</span>
+        </div>
       </div>
 
-      {/* SVG seat map */}
-      <div className="w-full overflow-x-auto">
+      {/* ── Polar seat map ──────────────────────────────────────────────────── */}
+      <div className="w-full">
         <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          width={SVG_W}
-          height={SVG_H}
-          className="mx-auto block overflow-visible"
+          viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
+          className="mx-auto block w-full max-w-[480px]"
+          preserveAspectRatio="xMidYMid meet"
         >
           <defs>
-            {/* Pitch glow gradient */}
-            <linearGradient id="ssv-pitchGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="transparent" />
-              <stop offset="50%" stopColor="#10B981" stopOpacity="0.65" />
-              <stop offset="100%" stopColor="transparent" />
-            </linearGradient>
-            {/* Selected seat glow */}
-            <filter id="ssv-glow">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+            {/* Radial glow for selected seats */}
+            <filter id="ssv-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b" />
               <feMerge>
-                <feMergeNode in="blur" />
+                <feMergeNode in="b" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+            {/* Pitch fill */}
+            <radialGradient id="ssv-pitchFill" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stopColor="#16a34a" />
+              <stop offset="100%" stopColor="#14532d" />
+            </radialGradient>
+            {/* Section highlight */}
+            <radialGradient id="ssv-sectionGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stopColor="#334155" stopOpacity="0" />
+              <stop offset="100%" stopColor="#1e40af" stopOpacity="0.08" />
+            </radialGradient>
           </defs>
 
-          {/* ── Seat rows (rendered back-to-front: H first, A last) ─────── */}
-          {[...ROW_CONFIGS].reverse().map((cfg, revIdx) => {
-            const rowSeats = seatsByRow.get(cfg.label) ?? [];
-            const centerY = ARC_CY - cfg.R;
-            const labelX = rowLabelX(cfg);
+          {/* ── Outer stadium wall ── */}
+          <circle cx={CX} cy={CY} r={OUTER_WALL_R}
+            fill="none" stroke="#1e293b" strokeWidth={10} />
+
+          {/* ── Section highlight band (background glow for selected section) ── */}
+          <motion.path
+            key={blockAngle}
+            d={sectorPath(PITCH_R + 1, OUTER_WALL_R - 4, startClk, endClk)}
+            fill="rgba(30,64,175,0.10)"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+          />
+
+          {/* ── Row band separators (faint arcs between rows) ── */}
+          {ROW_LABELS.map((_, i) => {
+            const R = rowRadius(i) + seatCircleR(i) + 2.5;
+            return (
+              <path key={i}
+                d={arcPath(R, startClk - 1, endClk + 1)}
+                fill="none" stroke="#334155" strokeWidth={1} opacity={0.4}
+              />
+            );
+          })}
+
+          {/* ── Pitch circle ── */}
+          <circle cx={CX} cy={CY} r={PITCH_R} fill="url(#ssv-pitchFill)" />
+          {/* Pitch strip */}
+          <rect x={CX - 5} y={CY - 16} width={10} height={32} rx={2}
+            fill="#92400e" opacity={0.75} />
+          {/* Wicket dots */}
+          <circle cx={CX} cy={CY - 13} r={1.5} fill="#fcd34d" />
+          <circle cx={CX} cy={CY + 13} r={1.5} fill="#fcd34d" />
+          {/* "GND" label */}
+          <text x={CX} y={CY + 2} textAnchor="middle" dominantBaseline="middle"
+            fontSize="6.5" fontWeight="bold" fill="rgba(255,255,255,0.5)" letterSpacing="1">
+            GND
+          </text>
+          {/* Boundary ring */}
+          <circle cx={CX} cy={CY} r={PITCH_R} fill="none"
+            stroke="#22c55e" strokeWidth={1.5} strokeDasharray="3,3" />
+
+          {/* ── Seat rows A → H ── */}
+          {ROW_SEAT_COUNTS.map((seatCount, rowIdx) => {
+            const rowLabel = ROW_LABELS[rowIdx];
+            const rowSeats = seatsByRow.get(rowLabel) ?? [];
+            const sr       = seatCircleR(rowIdx);
 
             return (
               <motion.g
-                key={cfg.label}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
+                key={`${section.id}-${rowLabel}`}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{
-                  delay: revIdx * 0.05,
+                  delay: rowIdx * 0.04,
                   duration: 0.28,
-                  ease: [0.22, 1, 0.36, 1],
+                  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
                 }}
+                style={{ transformBox: "fill-box", transformOrigin: `${CX}px ${CY}px` }}
               >
-                {/* Row label */}
-                <text
-                  x={labelX}
-                  y={centerY + SEAT_H / 2}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize="8.5"
-                  fontWeight="700"
-                  fill="rgba(148,163,184,0.65)"
-                >
-                  {cfg.label}
-                </text>
-
-                {/* Seats */}
-                {Array.from({ length: cfg.seatCount }, (_, j) => {
-                  const pos = seatPos(cfg, j);
+                {Array.from({ length: seatCount }, (_, j) => {
+                  const { x, y } = polarPos(rowIdx, j, seatCount, blockAngle);
                   const seat = rowSeats[j];
                   if (!seat) return null;
 
                   const isSelected = selectedSeatIds.has(seat.id);
-                  const isBooked = seat.status === "booked";
+                  const isBooked   = seat.status === "booked";
 
                   return (
-                    <motion.rect
+                    <motion.circle
                       key={seat.id}
-                      x={pos.x}
-                      y={pos.y}
-                      width={SEAT_W}
-                      height={SEAT_H}
-                      rx={SEAT_RX}
+                      cx={x} cy={y} r={sr}
                       initial={false}
                       animate={{
                         fill: isBooked
-                          ? "#1e1b1b"
+                          ? "#1a1213"
                           : isSelected
                           ? "#10B981"
                           : "#374151",
-                        opacity: isBooked ? 0.45 : 1,
+                        opacity: isBooked ? 0.32 : 1,
                       }}
                       whileHover={
                         !isBooked
-                          ? { scale: 1.4, fill: isSelected ? "#34D399" : "#9CA3AF" }
+                          ? { scale: 1.6, fill: isSelected ? "#34d399" : "#94a3b8" }
                           : {}
                       }
-                      whileTap={!isBooked ? { scale: 0.88 } : {}}
-                      transition={{ duration: 0.14 }}
+                      whileTap={!isBooked ? { scale: 0.78 } : {}}
+                      transition={{ duration: 0.12 }}
                       stroke={
                         isBooked
-                          ? "#3B1212"
+                          ? "#3b1212"
                           : isSelected
-                          ? "#34D399"
-                          : "#4B5563"
+                          ? "#34d399"
+                          : "#4b5563"
                       }
-                      strokeWidth={isSelected ? 1.5 : 0.7}
+                      strokeWidth={isSelected ? 1.5 : 0.5}
                       filter={isSelected ? "url(#ssv-glow)" : undefined}
                       style={{
                         cursor: isBooked ? "not-allowed" : "pointer",
@@ -212,66 +305,61 @@ export function StadiumSectionView({
                     >
                       <title>
                         {isBooked
-                          ? "Seat booked"
-                          : `Row ${cfg.label}, Seat ${j + 1} — ₹${seat.price}`}
+                          ? "Already booked"
+                          : `Row ${rowLabel} · Seat ${j + 1} · ₹${seat.price}`}
                       </title>
-                    </motion.rect>
+                    </motion.circle>
                   );
                 })}
               </motion.g>
             );
           })}
 
-          {/* ── Pitch indicator at BOTTOM — always fixed, consistent across all blocks ── */}
-          {/* Row A (inner, at bottom) is visually just above this pitch indicator */}
-          <rect
-            x={80}
-            y={SVG_H - 20}
-            width={SVG_W - 160}
-            height={7}
-            rx={3.5}
-            fill="url(#ssv-pitchGrad)"
-          />
-          <text
-            x={ARC_CX}
-            y={SVG_H - 5}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize="7"
-            fontWeight="800"
-            fill="rgba(52,211,153,0.65)"
-            letterSpacing="2"
-          >
-            ← PITCH / GROUND →
-          </text>
+          {/* ── Row labels — at the clockwise edge of each arc ── */}
+          {ROW_LABELS.map((label, rowIdx) => {
+            const R          = rowRadius(rowIdx);
+            const labelAngle = endClk + 4; // just past the last seat
+            const rad        = toRad(labelAngle);
+            const lx         = CX + R * Math.cos(rad);
+            const ly         = CY + R * Math.sin(rad);
+            const rot        = readableRot(labelAngle);
+
+            return (
+              <text
+                key={label}
+                x={lx.toFixed(1)}
+                y={ly.toFixed(1)}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="7.5"
+                fontWeight="700"
+                fill="rgba(148,163,184,0.55)"
+                transform={`rotate(${rot.toFixed(1)}, ${lx.toFixed(1)}, ${ly.toFixed(1)})`}
+                style={{ pointerEvents: "none", userSelect: "none" }}
+              >
+                {label}
+              </text>
+            );
+          })}
         </svg>
       </div>
 
-      {/* Legend */}
+      {/* ── Legend ── */}
       <div className="flex flex-wrap items-center justify-center gap-4 text-[10px] text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-3.5 rounded-[2px]"
-            style={{ background: "#374151", border: "0.7px solid #4B5563" }}
-          />
+          <span className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ background: "#374151", border: "0.5px solid #4B5563" }} />
           Available ({totalAvail})
         </span>
         <span className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-3.5 rounded-[2px]"
-            style={{
-              background: "#10B981",
-              border: "1px solid #34D399",
-              boxShadow: "0 0 5px rgba(52,211,153,0.45)",
-            }}
-          />
+          <span className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ background: "#10B981", border: "1px solid #34D399",
+              boxShadow: "0 0 5px rgba(52,211,153,0.5)" }} />
           Selected ({totalSelected})
         </span>
         <span className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-3.5 rounded-[2px] opacity-45"
-            style={{ background: "#1e1b1b", border: "0.7px solid #3B1212" }}
-          />
+          <span className="inline-block h-2.5 w-2.5 rounded-full opacity-40"
+            style={{ background: "#1a1213", border: "0.5px solid #3b1212" }} />
           Booked ({totalBooked})
         </span>
       </div>

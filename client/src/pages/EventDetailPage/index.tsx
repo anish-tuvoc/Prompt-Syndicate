@@ -139,40 +139,44 @@ export function EventDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        {/* Hero banner */}
-        <div className="relative aspect-[21/8] w-full overflow-hidden md:aspect-[21/7]">
-          <img
-            src={event.image}
-            alt={event.title}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+        {/* ── Shared container (matches navbar width) ── */}
+        <div className="mx-auto max-w-6xl px-4 pt-5 pb-10 md:px-6">
 
-          {/* Back button */}
+          {/* Back button — above image, inside container */}
           <button
             type="button"
-            onClick={() => navigate(-1)}
-            className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-black/60"
+            onClick={() => navigate("/")}
+            className="mb-4 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-white"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-            Back
+            Back to Events
           </button>
-        </div>
 
-        {/* Content */}
-        <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
-          <div className="grid gap-8 lg:grid-cols-3">
+          {/* Hero banner — contained & rounded */}
+          <div className="group relative aspect-[21/8] overflow-hidden rounded-2xl md:aspect-[21/7]">
+            <img
+              src={event.image}
+              alt={event.title}
+              className="h-full w-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-[1.03]"
+            />
+            {/* Bottom-heavy gradient so text below pops */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+
+            {/* Category badge — overlaid on image bottom-left */}
+            <span
+              className={`absolute bottom-4 left-4 inline-block rounded-full px-3 py-0.5 text-xs font-semibold text-white shadow ${CATEGORY_COLORS[event.category] ?? "bg-brand-600"}`}
+            >
+              {event.category}
+            </span>
+          </div>
+
+          {/* Content grid */}
+          <div className="mt-8 grid gap-8 lg:grid-cols-3">
             {/* Main info */}
             <div className="lg:col-span-2">
-              <span
-                className={`inline-block rounded-full px-3 py-0.5 text-xs font-semibold text-white ${CATEGORY_COLORS[event.category] ?? "bg-brand-600"}`}
-              >
-                {event.category}
-              </span>
-
-              <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
                 {event.title}
               </h1>
 
@@ -296,9 +300,9 @@ export function EventDetailPage() {
                 More {event.category} events
               </h2>
               <motion.div
-              initial="hidden"
-              animate="show"
-              variants={relatedContainerVariants}
+                initial="hidden"
+                animate="show"
+                variants={relatedContainerVariants}
                 className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
               >
                 {related.map((rel) => (
@@ -309,7 +313,8 @@ export function EventDetailPage() {
               </motion.div>
             </section>
           )}
-        </div>
+
+        </div>{/* /container */}
       </motion.div>
 
       {/* ── Auth gate ── */}

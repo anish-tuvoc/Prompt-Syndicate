@@ -509,10 +509,6 @@ export function BookingPage() {
                           </motion.button>
 
                           {/* Orientation badge */}
-                          <span className="flex items-center gap-1 rounded-full bg-emerald-900/30 px-2.5 py-1 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-700/50">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Pitch at bottom
-                          </span>
                         </div>
 
                         {/* Section seats */}

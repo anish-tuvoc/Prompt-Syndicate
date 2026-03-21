@@ -51,55 +51,64 @@ export function Toast({
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
-          key="toast"
-          initial={{ opacity: 0, y: -20, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -16, scale: 0.94 }}
-          transition={{ type: "spring", stiffness: 380, damping: 28 }}
-          className="fixed left-1/2 top-5 z-[70] -translate-x-1/2"
+        /*
+         * Outer div owns ONLY the fixed centering position — no Framer Motion
+         * transforms here so -translate-x-1/2 is never overwritten.
+         */
+        <div
+          className="fixed inset-x-0 top-5 z-[70] flex justify-center px-4"
           role="alert"
           aria-live="assertive"
         >
-          <div
-            className={`flex min-w-[260px] max-w-sm items-start gap-3 rounded-2xl border px-4 py-3 shadow-2xl shadow-black/50 backdrop-blur-md ${VARIANT_STYLES[variant]}`}
+          {/* Inner motion.div handles all animation (y + scale + opacity) */}
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            className="w-full max-w-sm"
           >
-            {/* Icon */}
-            <span className={`mt-0.5 shrink-0 ${ICON_COLORS[variant]}`}>
-              <LockIcon className="h-4 w-4" />
-            </span>
+            <div
+              className={`flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-2xl shadow-black/50 backdrop-blur-md ${VARIANT_STYLES[variant]}`}
+            >
+              {/* Icon */}
+              <span className={`mt-0.5 shrink-0 ${ICON_COLORS[variant]}`}>
+                <LockIcon className="h-4 w-4" />
+              </span>
 
-            {/* Text */}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white">{message}</p>
-              {subMessage && (
-                <p className="mt-0.5 text-[11px] text-slate-400">{subMessage}</p>
-              )}
+              {/* Text */}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">{message}</p>
+                {subMessage && (
+                  <p className="mt-0.5 text-[11px] text-slate-400">{subMessage}</p>
+                )}
+              </div>
+
+              {/* Dismiss */}
+              <button
+                type="button"
+                onClick={onDismiss}
+                aria-label="Dismiss"
+                className="ml-1 mt-0.5 shrink-0 rounded p-0.5 text-slate-500 transition hover:text-white"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            {/* Dismiss */}
-            <button
-              type="button"
-              onClick={onDismiss}
-              aria-label="Dismiss"
-              className="ml-1 mt-0.5 shrink-0 rounded p-0.5 text-slate-500 transition hover:text-white"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Progress bar */}
-          <motion.div
-            initial={{ scaleX: 1 }}
-            animate={{ scaleX: 0 }}
-            transition={{ duration: duration / 1000, ease: "linear" }}
-            className={`mt-1 h-0.5 origin-left rounded-full ${
-              variant === "warning" ? "bg-amber-400/60" : "bg-brand-400/60"
-            }`}
-          />
-        </motion.div>
+            {/* Progress bar */}
+            <motion.div
+              initial={{ scaleX: 1 }}
+              animate={{ scaleX: 0 }}
+              transition={{ duration: duration / 1000, ease: "linear" }}
+              className={`mt-1 h-0.5 origin-left rounded-full ${
+                variant === "warning" ? "bg-amber-400/60" : "bg-brand-400/60"
+              }`}
+            />
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );

@@ -39,7 +39,7 @@ const rowVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   },
 };
 
@@ -254,8 +254,8 @@ export function MovieTheaterLayout({
             })}
           </motion.div>
 
-          {/* ── Curved screen at BOTTOM ──────────────────────────────────── */}
-          <div className="mt-5">
+          {/* ── Curved screen at BOTTOM — no gap, sits right under row A ── */}
+          <div className="mt-1">
             <TheaterScreen />
           </div>
         </div>
@@ -284,78 +284,86 @@ export function MovieTheaterLayout({
   );
 }
 
-// ── Curved theater screen — positioned at BOTTOM, bows upward toward audience ──
+// ── Curved theater screen — CONCAVE / "inside bend" toward audience ──────────
+// Arc is ∪-shaped: endpoints high (y=8), control point low (y=52).
+// This means the screen center curves AWAY from the audience (inward/concave),
+// which is how real cinema screens look from the audience's perspective.
 function TheaterScreen() {
+  // Shared arc path (∪ — inside bend)
+  const ARC = "M 28,8 Q 310,54 592,8";
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.35, duration: 0.55, ease: "easeOut" }}
     >
       <svg
-        viewBox="0 0 620 68"
+        viewBox="0 0 620 72"
         className="mx-auto w-full max-w-[620px] overflow-visible"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Outermost halo */}
+        <defs>
+          {/* Gradient along the screen curve */}
+          <linearGradient id="screenGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="rgba(109,40,217,0.0)" />
+            <stop offset="20%"  stopColor="rgba(139,92,246,0.7)" />
+            <stop offset="50%"  stopColor="rgba(196,181,253,0.95)" />
+            <stop offset="80%"  stopColor="rgba(139,92,246,0.7)" />
+            <stop offset="100%" stopColor="rgba(109,40,217,0.0)" />
+          </linearGradient>
+        </defs>
+
+        {/* Outermost diffuse halo */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(139,92,246,0.08)"
-          strokeWidth="28"
+          stroke="rgba(109,40,217,0.10)"
+          strokeWidth="32"
           strokeLinecap="round"
         />
-        {/* Wide glow */}
+        {/* Mid glow */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(139,92,246,0.22)"
-          strokeWidth="12"
+          stroke="rgba(139,92,246,0.20)"
+          strokeWidth="14"
           strokeLinecap="round"
         />
         {/* Inner glow */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(167,139,250,0.48)"
-          strokeWidth="4"
+          stroke="rgba(167,139,250,0.42)"
+          strokeWidth="5"
           strokeLinecap="round"
         />
-        {/* Screen surface */}
+        {/* Screen surface — bright white line */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(255,255,255,0.86)"
+          stroke="rgba(255,255,255,0.88)"
           strokeWidth="2"
           strokeLinecap="round"
         />
-        {/* End caps */}
-        <circle cx="45" cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
-        <circle cx="575" cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
 
-        {/* "All eyes this way please" text */}
+        {/* End dots */}
+        <circle cx="28"  cy="8" r="3.5" fill="rgba(167,139,250,0.75)" />
+        <circle cx="592" cy="8" r="3.5" fill="rgba(167,139,250,0.75)" />
+
+        {/* "All eyes this way please" — sits INSIDE the curve at center */}
         <text
           x="310"
-          y="64"
+          y="65"
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize="8.5"
           fontWeight="700"
-          letterSpacing="2.5"
-          fill="rgba(255,255,255,0.38)"
+          letterSpacing="3"
+          fill="rgba(196,181,253,0.45)"
         >
           ALL EYES THIS WAY PLEASE
         </text>
-
-        {/* Subtle scan line */}
-        <line
-          x1="185"
-          y1="57"
-          x2="435"
-          y2="57"
-          stroke="rgba(255,255,255,0.07)"
-          strokeWidth="0.5"
-        />
       </svg>
     </motion.div>
   );
