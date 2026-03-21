@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getEventByIdFromApi } from "../EventDetailPage/service";
@@ -22,7 +22,7 @@ import {
   generateSectionSeats,
   formatPrice,
 } from "./service";
-import { getEventSeats, lockSeat } from "../../api/seats";
+import { getEventSeats, lockSeat, unlockSeat } from "../../api/seats";
 import { confirmBooking } from "../../api/bookings";
 import type {
   FullMovieRow,
@@ -79,8 +79,30 @@ export function BookingPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
+  const [lockingInProgress, setLockingInProgress] = useState(false);
 
-  // ── Auth-guarded proceed handler — locks seats then confirms ────────
+  // ── Fetch movie seats from API ─────────────────────────────────────
+  const movieSelectedSeatIdsRef = useRef(movieSelectedSeatIds);
+  movieSelectedSeatIdsRef.current = movieSelectedSeatIds;
+
+  const fetchMovieSeats = useCallback(async () => {
+    if (!event || event.type !== "movie") return;
+    try {
+      const seats = await getEventSeats(event.id);
+      setMovieRows(buildMovieRowsFromApi(seats, event, movieSelectedSeatIdsRef.current));
+    } catch {
+      // Fallback on error
+    }
+  }, [event]);
+
+  // ── Poll seat statuses every 3s for movies (see other users' locks) ──
+  useEffect(() => {
+    if (!event || event.type !== "movie") return;
+    const interval = setInterval(fetchMovieSeats, 3000);
+    return () => clearInterval(interval);
+  }, [event, fetchMovieSeats]);
+
+  // ── Auth-guarded proceed handler — seats already locked, just confirm ──
   const handleProceed = useCallback(async () => {
     if (!isLoggedIn) {
       setShowAuthToast(true);
@@ -96,7 +118,7 @@ export function BookingPage() {
       setIsBooking(true);
       setBookingError("");
       try {
-        // Lock all selected seats
+        // Re-lock to extend expiry before confirming
         for (const seatId of selectedIds) {
           await lockSeat(seatId);
         }
@@ -105,6 +127,8 @@ export function BookingPage() {
         setIsSuccess(true);
       } catch (err) {
         setBookingError(err instanceof Error ? err.message : "Booking failed. Please try again.");
+        // Refresh seats to show updated state
+        fetchMovieSeats();
       } finally {
         setIsBooking(false);
       }
@@ -112,19 +136,14 @@ export function BookingPage() {
       // Sports / event — keep existing mock behavior
       setIsSuccess(true);
     }
-  }, [isLoggedIn, event, movieSelectedSeatIds]);
+  }, [isLoggedIn, event, movieSelectedSeatIds, fetchMovieSeats]);
 
   // ── Initialise by event type ──────────────────────────────────────────
   useEffect(() => {
     if (!event) return;
     if (event.type === "movie") {
       // Fetch real seats from backend
-      getEventSeats(event.id).then((seats) => {
-        setMovieRows(buildMovieRowsFromApi(seats, event));
-      }).catch(() => {
-        // Fallback to generated seats if API fails
-        setMovieRows(generateFullMovieRows(event));
-      });
+      fetchMovieSeats();
     }
     if (event.type === "sports") {
       const blocks = generateStadiumBlocks(event);
@@ -206,14 +225,47 @@ export function BookingPage() {
     [movieRows],
   );
 
-  const handleToggleMovieSeat = useCallback((seatId: string) => {
-    setMovieSelectedSeatIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(seatId)) next.delete(seatId);
-      else next.add(seatId);
-      return next;
-    });
-  }, []);
+  const handleToggleMovieSeat = useCallback(async (seatId: string) => {
+    if (lockingInProgress) return;
+
+    const isCurrentlySelected = movieSelectedSeatIds.has(seatId);
+
+    if (!isLoggedIn) {
+      // If not logged in, show auth modal on first seat click
+      setShowAuthToast(true);
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setLockingInProgress(true);
+    try {
+      if (isCurrentlySelected) {
+        // Deselect → unlock
+        await unlockSeat(seatId);
+        setMovieSelectedSeatIds((prev) => {
+          const next = new Set(prev);
+          next.delete(seatId);
+          return next;
+        });
+      } else {
+        // Select → lock
+        await lockSeat(seatId);
+        setMovieSelectedSeatIds((prev) => {
+          const next = new Set(prev);
+          next.add(seatId);
+          return next;
+        });
+      }
+      // Refresh seats to get latest statuses
+      fetchMovieSeats();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not lock seat";
+      setBookingError(msg);
+      fetchMovieSeats();
+    } finally {
+      setLockingInProgress(false);
+    }
+  }, [movieSelectedSeatIds, isLoggedIn, lockingInProgress, fetchMovieSeats]);
 
   // Sports accordion category toggle
   const handleToggleSportsCategory = useCallback((catId: string) => {
