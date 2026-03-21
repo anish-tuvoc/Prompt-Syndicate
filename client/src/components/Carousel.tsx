@@ -45,6 +45,7 @@ export function Carousel({ events }: CarouselProps) {
 
   const slideTo = useCallback(
     (index: number, dir: number) => {
+      if (events.length === 0) return;
       setSlide([(index + events.length) % events.length, dir]);
     },
     [events.length],
@@ -54,10 +55,12 @@ export function Carousel({ events }: CarouselProps) {
   const prev = useCallback(() => slideTo(current - 1, -1), [current, slideTo]);
 
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || events.length === 0) return;
     const id = setInterval(next, SLIDE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [next, isPaused]);
+  }, [next, isPaused, events.length]);
+
+  if (events.length === 0) return null;
 
   function handleDragStart() {
     isDragging.current = true;
