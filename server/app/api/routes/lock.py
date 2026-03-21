@@ -62,3 +62,22 @@ def lock_seat(request: LockRequest, db: Session = Depends(get_db), current_user 
     db.commit()
     db.refresh(new_lock)
     return new_lock
+
+
+@router.delete("/{seat_id}")
+def unlock_seat(seat_id: UUID, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    """Release a lock held by the current user (e.g. when they deselect a seat)."""
+    lock = db.query(SeatLock).filter(SeatLock.seat_id == seat_id).first()
+    if not lock:
+        return {"ok": True}  # no lock to release
+
+    if lock.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot unlock a seat locked by another user.")
+
+    seat = db.query(Seat).filter(Seat.id == seat_id).first()
+    if seat and seat.status == SeatStatus.LOCKED:
+        seat.status = SeatStatus.AVAILABLE
+
+    db.delete(lock)
+    db.commit()
+    return {"ok": True}

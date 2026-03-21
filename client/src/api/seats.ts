@@ -24,3 +24,7 @@ export function getEventSeats(eventId: string) {
 export function lockSeat(seatId: string) {
   return api.post<LockResponse>('/lock-seats/', { seat_id: seatId });
 }
+
+export function unlockSeat(seatId: string) {
+  return api.delete<{ ok: boolean }>(`/lock-seats/${seatId}`);
+}

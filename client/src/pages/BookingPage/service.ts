@@ -51,9 +51,12 @@ export const MOVIE_ROW_MAP: Record<string, string[]> = {
 };
 
 // ── Build movie rows from real backend seats ─────────────────────────────
+// myLockedSeatIds: seats the current user has locked (shown as "available"
+// so they appear selectable/selected, not as "booked")
 export function buildMovieRowsFromApi(
   seats: SeatResponse[],
   event: EventData,
+  myLockedSeatIds: Set<string> = new Set(),
 ): FullMovieRow[] {
   // Build a lookup: categoryId → set of row labels
   const catToRows = new Map<string, Set<string>>();
@@ -76,8 +79,12 @@ export function buildMovieRowsFromApi(
     const price =
       event.priceCategories.find((c) => c.id === categoryId)?.price ?? 0;
 
+    // Current user's locked seats → "available" (so they render as selected)
+    // Other users' locked / booked seats → "booked" (unavailable)
     const status: "available" | "booked" =
-      seat.status === "AVAILABLE" ? "available" : "booked";
+      seat.status === "AVAILABLE" || myLockedSeatIds.has(seat.id)
+        ? "available"
+        : "booked";
 
     const sectionSeat: SectionSeat = {
       id: seat.id,           // real UUID from backend
