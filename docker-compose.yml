@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ticket_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ticket_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: ticket_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./server:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/ticket_db
+      - SECRET_KEY=supersecretjwtkeyforhackathon
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  frontend:
+    # We will build this once the frontend project is initiated
+    # Using a placeholder image for now or just sleeping
+    image: node:18-alpine
+    container_name: ticket_frontend
+    working_dir: /app
+    volumes:
+      - ./client:/app
+    command: sh -c "if [ ! -f package.json ]; then echo 'Waiting for React init...' && sleep 3600; else npm install && npm run dev; fi"
+    ports:
+      - "5173:5173"
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
