@@ -1,5 +1,6 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/useTheme";
+import { useAuth } from "../context/useAuth";
 
 function SunIcon() {
   return (
@@ -19,6 +20,8 @@ function MoonIcon() {
 
 export function Navbar() {
   const { isDark, toggleTheme } = useTheme();
+  const { isLoggedIn, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-800/80 dark:bg-slate-950/80">
@@ -47,6 +50,29 @@ export function Navbar() {
           >
             Browse Events
           </NavLink>
+
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={() => { logout(); navigate("/"); }}
+              className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Logout
+            </button>
+          ) : (
+            <NavLink
+              to="/auth"
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-brand-600 text-white"
+                    : "border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                }`
+              }
+            >
+              Sign In
+            </NavLink>
+          )}
 
           <button
             type="button"

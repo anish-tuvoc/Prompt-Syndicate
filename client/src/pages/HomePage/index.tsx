@@ -5,7 +5,8 @@ import { EventCard } from "../../components/EventCard";
 import { cardVariants } from "../../components/cardVariants";
 import { EventCardSkeleton } from "../../components/EventCardSkeleton";
 import { FilterBar, type CategoryFilter, type SortOption } from "../../components/FilterBar";
-import { getAllEvents, getFeaturedEvents, filterAndSortEvents } from "./service";
+import { getAllEventsFromApi, filterAndSortEvents } from "./service";
+import type { EventData } from "../../data/events";
 
 const SKELETON_COUNT = 8;
 
@@ -18,16 +19,18 @@ const containerVariants: Variants = {
 
 export function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [allEvents, setAllEvents] = useState<EventData[]>([]);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
   const [sortBy, setSortBy] = useState<SortOption>("date");
 
-  const allEvents = useMemo(() => getAllEvents(), []);
-  const featuredEvents = useMemo(() => getFeaturedEvents(), []);
-
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 1200);
-    return () => clearTimeout(t);
+    getAllEventsFromApi().then((events) => {
+      setAllEvents(events);
+      setIsLoading(false);
+    });
   }, []);
+
+  const featuredEvents = useMemo(() => allEvents.filter((e) => e.featured), [allEvents]);
 
   const visibleEvents = useMemo(
     () => filterAndSortEvents(allEvents, activeCategory, sortBy),

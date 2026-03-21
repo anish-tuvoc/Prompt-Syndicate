@@ -1,6 +1,16 @@
 import { EVENTS, type EventData } from "../../data/events";
+import { fetchEvents } from "../../api/events";
 import type { SortOption } from "../../components/FilterBar";
 import type { CategoryFilter } from "../../components/FilterBar";
+
+export async function getAllEventsFromApi(): Promise<EventData[]> {
+  try {
+    return await fetchEvents();
+  } catch {
+    // Fallback to static data if API is unavailable
+    return EVENTS;
+  }
+}
 
 export function getAllEvents(): EventData[] {
   return EVENTS;

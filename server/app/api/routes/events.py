@@ -10,8 +10,11 @@ from app.core.dependencies import get_current_admin
 router = APIRouter()
 
 @router.get("/", response_model=List[EventResponse])
-def get_events(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    events = db.query(Event).offset(skip).limit(limit).all()
+def get_events(skip: int = 0, limit: int = 100, category: str | None = None, db: Session = Depends(get_db)):
+    query = db.query(Event)
+    if category and category != "All":
+        query = query.filter(Event.category == category)
+    events = query.offset(skip).limit(limit).all()
     return events
 
 @router.post("/", response_model=EventResponse)

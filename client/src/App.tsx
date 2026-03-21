@@ -3,6 +3,7 @@ import { CommonLayout } from "./layout/CommonLayout";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { HomePage } from "./pages/HomePage";
 import { BookingPage } from "./pages/BookingPage";
+import { AuthPage } from "./pages/AuthPage";
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <Route element={<CommonLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/event/:id" element={<EventDetailPage />} />
+        <Route path="/auth" element={<AuthPage />} />
       </Route>
       {/* Booking page has its own full-screen layout */}
       <Route path="/event/:id/book" element={<BookingPage />} />

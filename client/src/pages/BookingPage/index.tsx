@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { getEventById } from "../EventDetailPage/service";
+import { getEventByIdFromApi } from "../EventDetailPage/service";
 import { BookingHeader } from "../../components/booking/BookingHeader";
 import { SeatGrid } from "../../components/booking/SeatGrid";
 import { StadiumLayout } from "../../components/booking/StadiumLayout";
@@ -14,13 +14,20 @@ import {
   generateTicketCategories,
   formatPrice,
 } from "./service";
+import type { EventData } from "../../data/events";
 import type { MovieRow, StadiumBlock, EventTicketCategory, MovieSeat } from "./type";
 
 export function BookingPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const event = useMemo(() => getEventById(id ?? ""), [id]);
+  const [event, setEvent] = useState<EventData | null>(null);
+  useEffect(() => {
+    if (!id) return;
+    getEventByIdFromApi(id).then((ev) => {
+      setEvent(ev);
+    });
+  }, [id]);
 
   // ── Movie state ────────────────────────────────────────────
   const [movieRows, setMovieRows] = useState<MovieRow[]>([]);
