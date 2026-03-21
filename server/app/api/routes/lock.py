@@ -9,7 +9,7 @@ from app.schemas.lock import LockRequest, LockResponse
 from app.core.dependencies import get_current_user
 
 router = APIRouter()
-LOCK_DURATION_MINUTES = 5
+LOCK_DURATION_MINUTES = 1
 
 @router.post("/", response_model=LockResponse)
 def lock_seat(request: LockRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):

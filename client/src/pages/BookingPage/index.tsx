@@ -89,6 +89,24 @@ export function BookingPage() {
     if (!event || event.type !== "movie") return;
     try {
       const seats = await getEventSeats(event.id);
+      // Auto-deselect seats whose locks have expired (status reverted to AVAILABLE)
+      const selected = movieSelectedSeatIdsRef.current;
+      if (selected.size > 0) {
+        const seatMap = new Map(seats.map((s) => [s.id, s]));
+        const expired: string[] = [];
+        for (const id of selected) {
+          const s = seatMap.get(id);
+          // If seat is AVAILABLE in backend, our lock expired
+          if (s && s.status === "AVAILABLE") expired.push(id);
+        }
+        if (expired.length > 0) {
+          setMovieSelectedSeatIds((prev) => {
+            const next = new Set(prev);
+            for (const id of expired) next.delete(id);
+            return next;
+          });
+        }
+      }
       setMovieRows(buildMovieRowsFromApi(seats, event, movieSelectedSeatIdsRef.current));
     } catch {
       // Fallback on error
@@ -412,7 +430,7 @@ export function BookingPage() {
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="flex min-h-screen flex-col bg-slate-950 text-slate-100"
       >
-        <BookingHeader event={event} selectedCount={selectedCount} />
+        <BookingHeader event={event} selectedCount={selectedCount} onSessionExpire={() => navigate("/")} />
 
         <div className="flex-1 overflow-auto pb-28">
           <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
