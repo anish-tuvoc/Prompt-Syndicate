@@ -23,7 +23,7 @@ function MoonIcon() {
 
 export function Navbar() {
   const { isDark, toggleTheme } = useTheme();
-  const { isLoggedIn, user, logout } = useAuth();
+  const { isLoggedIn, isAdmin, user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -62,6 +62,21 @@ export function Navbar() {
           >
             Browse Events
           </NavLink>
+
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `hidden text-sm font-medium transition md:block ${
+                  isActive
+                    ? "text-brand-600 dark:text-brand-400"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`
+              }
+            >
+              Admin
+            </NavLink>
+          )}
 
           {/* ── Logged-in user pill ── */}
           {isLoggedIn && user ? (

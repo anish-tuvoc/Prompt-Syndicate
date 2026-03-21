@@ -9,6 +9,8 @@ from app.models.event import Event
 from app.models.seat import Seat, SeatStatus
 from app.models.booking import Booking, BookingStatus
 from app.models.seat_lock import SeatLock
+from app.models.venue import Venue
+from app.models.booking_seat import BookingSeat
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -278,6 +280,27 @@ def init_db(db: Session) -> None:
         logger.info(f"Seeded {len(SEED_EVENTS)} events.")
     else:
         logger.info(f"{event_count} events already exist, skipping seed.")
+
+    # 4. Ensure seats exist for each event
+    events = db.query(Event).all()
+    seats_created = 0
+    for event in events:
+        existing = db.query(Seat).filter(Seat.event_id == event.id).count()
+        if existing > 0:
+            continue
+        total = max(1, event.total_seats or 0)
+        for index in range(1, total + 1):
+            db.add(
+                Seat(
+                    event_id=event.id,
+                    seat_number=f"S{index:03d}",
+                    status=SeatStatus.AVAILABLE,
+                )
+            )
+            seats_created += 1
+    if seats_created > 0:
+        db.commit()
+        logger.info(f"Seeded {seats_created} seats across events.")
 
 if __name__ == "__main__":
     db = SessionLocal()

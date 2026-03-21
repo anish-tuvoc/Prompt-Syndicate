@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.models.seat import Seat, SeatStatus
 from app.models.seat_lock import SeatLock
 from app.models.booking import Booking, BookingStatus
+from app.models.booking_seat import BookingSeat
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.core.dependencies import get_current_user
 
@@ -43,11 +44,13 @@ def confirm_booking(request: BookingRequest, db: Session = Depends(get_db), curr
         status=BookingStatus.CONFIRMED
     )
     db.add(new_booking)
+    db.flush()
 
     # Mark seats as BOOKED and remove locks
     for seat_id in request.seat_ids:
         seat = db.query(Seat).filter(Seat.id == seat_id).first()
         seat.status = SeatStatus.BOOKED
+        db.add(BookingSeat(booking_id=new_booking.id, seat_id=seat.id))
         
         lock = db.query(SeatLock).filter(SeatLock.seat_id == seat.id).first()
         if lock:

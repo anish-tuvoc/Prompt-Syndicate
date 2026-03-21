@@ -10,8 +10,10 @@ export interface AuthUser {
 interface AuthState {
   token: string | null;
   isLoggedIn: boolean;
+  isAdmin: boolean;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
+  adminLogin: (username: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -37,7 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(
     () => localStorage.getItem(TOKEN_KEY),
   );
-
+  const [role, setRole] = useState<'user' | 'admin'>(
+    () => (localStorage.getItem('auth_role') === 'admin' ? 'admin' : 'user')
+  );
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
       const raw = localStorage.getItem(USER_KEY);
@@ -47,9 +51,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const persistToken = (t: string) => {
+  const persistToken = (t: string, nextRole: 'user' | 'admin') => {
     localStorage.setItem(TOKEN_KEY, t);
+    localStorage.setItem('auth_role', nextRole);
     setToken(t);
+    setRole(nextRole);
   };
 
   const persistUser = (u: AuthUser) => {
@@ -59,26 +65,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password);
-    persistToken(res.access_token);
+    persistToken(res.access_token, 'user');
     persistUser(buildUser(email));
+  }, []);
+
+  const adminLogin = useCallback(async (username: string, password: string) => {
+    const res = await authApi.adminLogin(username, password);
+    persistToken(res.access_token, 'admin');
   }, []);
 
   const signup = useCallback(async (name: string, email: string, password: string) => {
     const res = await authApi.signup(name, email, password);
-    persistToken(res.access_token);
+    persistToken(res.access_token, 'user');
     persistUser(buildUser(email, name));
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem('auth_role');
     setToken(null);
     setUser(null);
+    setRole('user');
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ token, isLoggedIn: !!token, user, login, signup, logout }}
+      value={{ token, isLoggedIn: !!token, isAdmin: !!token && role === 'admin', user, login, adminLogin, signup, logout }}
     >
       {children}
     </AuthContext.Provider>

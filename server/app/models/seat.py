@@ -20,3 +20,4 @@ class Seat(Base):
 
     event = relationship("Event", back_populates="seats")
     active_lock = relationship("SeatLock", back_populates="seat", uselist=False)
+    booking_seats = relationship("BookingSeat", back_populates="seat", cascade="all, delete-orphan")

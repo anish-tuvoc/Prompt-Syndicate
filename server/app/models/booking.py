@@ -22,3 +22,4 @@ class Booking(Base):
 
     user = relationship("User")
     event = relationship("Event", back_populates="bookings")
+    booking_seats = relationship("BookingSeat", back_populates="booking", cascade="all, delete-orphan")
