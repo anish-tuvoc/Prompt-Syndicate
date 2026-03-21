@@ -415,7 +415,6 @@ export function BookingPage() {
                           priceCategories={event.priceCategories}
                           selectedCategoryId={selectedMovieCategory}
                           selectedSeatIds={movieSelectedSeatIds}
-                          focusCategoryId="prime"
                           onToggleSeat={handleToggleMovieSeat}
                         />
                       </motion.div>
