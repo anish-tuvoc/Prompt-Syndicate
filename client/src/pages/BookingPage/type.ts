@@ -1,22 +1,35 @@
 export type SeatStatus = "available" | "selected" | "booked";
-export type SeatSection = "front" | "middle" | "rear";
 export type StadiumTier = "vip" | "premium" | "standard" | "budget";
 
-export interface MovieSeat {
+// ── Individual seat ───────────────────────────────────────────────────────
+export interface SectionSeat {
   id: string;
-  row: string;
-  col: number;
-  section: SeatSection;
+  rowLabel: string; // "A".."L" for movie, "A".."H" for sports section
+  colIndex: number;
   status: SeatStatus;
   price: number;
+  categoryId?: string; // used by movie category-filtering
 }
 
-export interface MovieRow {
-  label: string;
-  section: SeatSection;
-  seats: MovieSeat[];
+// ── Full movie theater row (12 rows A–L generated upfront) ────────────────
+export interface FullMovieRow {
+  rowLabel: string;
+  categoryId: string; // "classic" | "prime" | "prime_plus" | "recliner"
+  price: number;
+  seats: SectionSeat[];
 }
 
+// ── Sports section (simplified — row layout is handled by StadiumSectionView) ──
+export interface SectionData {
+  id: string;
+  label: string;      // "Block V1"
+  shortLabel: string; // "V1"
+  categoryId: string; // "vip" | "premium" | "standard" | "budget"
+  eventType: "sports";
+  availablePercent: number; // 0..1
+}
+
+// ── Stadium block (for the SVG overview map) ──────────────────────────────
 export interface StadiumBlock {
   id: string;
   label: string;
@@ -31,6 +44,7 @@ export interface StadiumBlock {
   availableSeats: number;
 }
 
+// ── Event / concert ticket categories ─────────────────────────────────────
 export interface EventTicketCategory {
   id: string;
   label: string;

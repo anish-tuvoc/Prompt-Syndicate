@@ -249,9 +249,10 @@ export const EVENTS: EventData[] = [
     totalSeats: 168,
     type: "movie",
     priceCategories: [
-      { id: "front",  label: "Front (Rows A–D)",  price: 200, color: "#0EA5E9" },
-      { id: "middle", label: "Middle (Rows E–H)", price: 450, color: "#8B5CF6" },
-      { id: "rear",   label: "Rear (Rows I–L)",   price: 350, color: "#EC4899" },
+      { id: "classic",    label: "Classic",    price: 200, color: "#64748B" },
+      { id: "prime",      label: "Prime",      price: 350, color: "#3B82F6" },
+      { id: "prime_plus", label: "Prime Plus", price: 500, color: "#8B5CF6" },
+      { id: "recliner",   label: "Recliner",   price: 800, color: "#F59E0B" },
     ],
   },
   {
@@ -274,9 +275,10 @@ export const EVENTS: EventData[] = [
     totalSeats: 168,
     type: "movie",
     priceCategories: [
-      { id: "front",  label: "Front (Rows A–D)",  price: 250, color: "#0EA5E9" },
-      { id: "middle", label: "Middle (Rows E–H)", price: 500, color: "#8B5CF6" },
-      { id: "rear",   label: "Rear (Rows I–L)",   price: 400, color: "#EC4899" },
+      { id: "classic",    label: "Classic",    price: 250, color: "#64748B" },
+      { id: "prime",      label: "Prime",      price: 450, color: "#3B82F6" },
+      { id: "prime_plus", label: "Prime Plus", price: 600, color: "#8B5CF6" },
+      { id: "recliner",   label: "Recliner",   price: 950, color: "#F59E0B" },
     ],
   },
 ];
