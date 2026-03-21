@@ -14,6 +14,7 @@ import { LoginModal } from "../../components/LoginModal";
 import { Toast } from "../../components/Toast";
 import { useAuth } from "../../context/useAuth";
 import {
+  buildMovieRowsFromApi,
   generateFullMovieRows,
   generateSportsSections,
   generateStadiumBlocks,
@@ -21,6 +22,8 @@ import {
   generateSectionSeats,
   formatPrice,
 } from "./service";
+import { getEventSeats, lockSeat } from "../../api/seats";
+import { confirmBooking } from "../../api/bookings";
 import type {
   FullMovieRow,
   SectionData,
@@ -74,22 +77,54 @@ export function BookingPage() {
 
   // ── Success ───────────────────────────────────────────────────────────
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState("");
 
-  // ── Auth-guarded proceed handler ─────────────────────────────────────
-  const handleProceed = useCallback(() => {
+  // ── Auth-guarded proceed handler — locks seats then confirms ────────
+  const handleProceed = useCallback(async () => {
     if (!isLoggedIn) {
       setShowAuthToast(true);
       setIsLoginModalOpen(true);
       return;
     }
-    setIsSuccess(true);
-  }, [isLoggedIn]);
+    if (!event) return;
+
+    if (event.type === "movie") {
+      const selectedIds = Array.from(movieSelectedSeatIds);
+      if (selectedIds.length === 0) return;
+
+      setIsBooking(true);
+      setBookingError("");
+      try {
+        // Lock all selected seats
+        for (const seatId of selectedIds) {
+          await lockSeat(seatId);
+        }
+        // Confirm booking
+        await confirmBooking(event.id, selectedIds);
+        setIsSuccess(true);
+      } catch (err) {
+        setBookingError(err instanceof Error ? err.message : "Booking failed. Please try again.");
+      } finally {
+        setIsBooking(false);
+      }
+    } else {
+      // Sports / event — keep existing mock behavior
+      setIsSuccess(true);
+    }
+  }, [isLoggedIn, event, movieSelectedSeatIds]);
 
   // ── Initialise by event type ──────────────────────────────────────────
   useEffect(() => {
     if (!event) return;
     if (event.type === "movie") {
-      setMovieRows(generateFullMovieRows(event));
+      // Fetch real seats from backend
+      getEventSeats(event.id).then((seats) => {
+        setMovieRows(buildMovieRowsFromApi(seats, event));
+      }).catch(() => {
+        // Fallback to generated seats if API fails
+        setMovieRows(generateFullMovieRows(event));
+      });
     }
     if (event.type === "sports") {
       const blocks = generateStadiumBlocks(event);
@@ -572,6 +607,16 @@ export function BookingPage() {
           tickets={tickets}
           totalPrice={totalPrice}
           onProceed={handleProceed}
+          isLoading={isBooking}
+        />
+
+        {/* ── Booking error ── */}
+        <Toast
+          isVisible={!!bookingError}
+          message="Booking failed"
+          subMessage={bookingError}
+          variant="error"
+          onDismiss={() => setBookingError("")}
         />
 
         {/* ── Auth gate ── */}
@@ -587,7 +632,7 @@ export function BookingPage() {
           onClose={() => setIsLoginModalOpen(false)}
           onSuccess={() => {
             setIsLoginModalOpen(false);
-            setIsSuccess(true);
+            handleProceed();
           }}
           contextMessage={
             selectedCount > 0

@@ -9,6 +9,7 @@ interface BookingSummaryProps {
   tickets: EventTicketCategory[];
   totalPrice: number;
   onProceed: () => void;
+  isLoading?: boolean;
 }
 
 export function BookingSummary({
@@ -17,6 +18,7 @@ export function BookingSummary({
   tickets,
   totalPrice,
   onProceed,
+  isLoading = false,
 }: BookingSummaryProps) {
   const hasSelection =
     eventType === "event"
@@ -97,17 +99,17 @@ export function BookingSummary({
 
           <motion.button
             type="button"
-            disabled={!hasSelection}
+            disabled={!hasSelection || isLoading}
             onClick={onProceed}
-            whileHover={hasSelection ? { scale: 1.04 } : {}}
-            whileTap={hasSelection ? { scale: 0.96 } : {}}
+            whileHover={hasSelection && !isLoading ? { scale: 1.04 } : {}}
+            whileTap={hasSelection && !isLoading ? { scale: 0.96 } : {}}
             className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
-              hasSelection
+              hasSelection && !isLoading
                 ? "bg-brand-500 text-white shadow-[0_0_16px_rgba(139,92,246,0.45)] hover:bg-brand-400"
                 : "cursor-not-allowed bg-slate-800 text-slate-600"
             }`}
           >
-            Proceed to Pay
+            {isLoading ? "Booking..." : "Proceed to Pay"}
           </motion.button>
         </div>
       </div>

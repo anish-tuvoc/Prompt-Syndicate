@@ -282,22 +282,39 @@ def init_db(db: Session) -> None:
         logger.info(f"{event_count} events already exist, skipping seed.")
 
     # 4. Ensure seats exist for each event
+    # Movies get row-column seats (A1–L14), others get sequential (S001, S002...)
+    MOVIE_ROWS = list("ABCDEFGHIJKL")  # 12 rows
+    MOVIE_COLS = 14  # 14 seats per row = 168 total
+
     events = db.query(Event).all()
     seats_created = 0
     for event in events:
         existing = db.query(Seat).filter(Seat.event_id == event.id).count()
         if existing > 0:
             continue
-        total = max(1, event.total_seats or 0)
-        for index in range(1, total + 1):
-            db.add(
-                Seat(
-                    event_id=event.id,
-                    seat_number=f"S{index:03d}",
-                    status=SeatStatus.AVAILABLE,
+
+        if event.event_type == "movie":
+            for row in MOVIE_ROWS:
+                for col in range(1, MOVIE_COLS + 1):
+                    db.add(
+                        Seat(
+                            event_id=event.id,
+                            seat_number=f"{row}{col}",
+                            status=SeatStatus.AVAILABLE,
+                        )
+                    )
+                    seats_created += 1
+        else:
+            total = max(1, event.total_seats or 0)
+            for index in range(1, total + 1):
+                db.add(
+                    Seat(
+                        event_id=event.id,
+                        seat_number=f"S{index:03d}",
+                        status=SeatStatus.AVAILABLE,
+                    )
                 )
-            )
-            seats_created += 1
+                seats_created += 1
     if seats_created > 0:
         db.commit()
         logger.info(f"Seeded {seats_created} seats across events.")

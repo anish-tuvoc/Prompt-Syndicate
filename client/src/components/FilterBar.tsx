@@ -13,7 +13,8 @@ interface FilterBarProps {
   onSortChange: (sort: SortOption) => void;
 }
 
-const CATEGORIES: CategoryFilter[] = ["All", "Concert", "Theatre", "Comedy", "Sports", "Festival", "Movie"];
+const CATEGORIES: CategoryFilter[] = ["All", "Movie", "Concert", "Theatre", "Comedy", "Sports", "Festival"];
+const WIP_CATEGORIES = new Set<CategoryFilter>(["Concert", "Theatre", "Comedy", "Sports", "Festival"]);
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "date",       label: "Date (soonest)" },
@@ -28,7 +29,7 @@ export function FilterBar({ activeCategory, sortBy, onCategoryChange, onSortChan
       {/* Category tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {CATEGORIES.map((cat) => (
-          <div key={cat} className="relative shrink-0">
+          <div key={cat} className="group relative shrink-0">
             <button
               type="button"
               onClick={() => onCategoryChange(cat)}
@@ -47,6 +48,11 @@ export function FilterBar({ activeCategory, sortBy, onCategoryChange, onSortChan
               )}
               <span className="relative z-10">{cat}</span>
             </button>
+            {WIP_CATEGORIES.has(cat) && (
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-700 px-2 py-1 text-[10px] font-medium text-slate-300 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                WIP - Booking coming soon
+              </span>
+            )}
           </div>
         ))}
       </div>

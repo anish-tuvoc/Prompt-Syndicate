@@ -1,4 +1,5 @@
 import type { EventData, PriceCategory } from "../../data/events";
+import type { SeatResponse } from "../../api/seats";
 import type {
   FullMovieRow,
   SectionData,
@@ -48,6 +49,66 @@ export const MOVIE_ROW_MAP: Record<string, string[]> = {
   middle:     ["E", "F", "G", "H"],
   rear:       ["I", "J", "K", "L"],
 };
+
+// ── Build movie rows from real backend seats ─────────────────────────────
+export function buildMovieRowsFromApi(
+  seats: SeatResponse[],
+  event: EventData,
+): FullMovieRow[] {
+  // Build a lookup: categoryId → set of row labels
+  const catToRows = new Map<string, Set<string>>();
+  const rowToCat = new Map<string, string>();
+  for (const cat of event.priceCategories) {
+    const rowLabels = MOVIE_ROW_MAP[cat.id] ?? [];
+    catToRows.set(cat.id, new Set(rowLabels));
+    for (const r of rowLabels) rowToCat.set(r, cat.id);
+  }
+
+  // Group seats by row label
+  const rowMap = new Map<string, SectionSeat[]>();
+  for (const seat of seats) {
+    // seat_number format: "A1", "B14", etc.
+    const match = seat.seat_number.match(/^([A-L])(\d+)$/);
+    if (!match) continue;
+    const [, rowLabel, colStr] = match;
+    const colIndex = parseInt(colStr, 10);
+    const categoryId = rowToCat.get(rowLabel) ?? "";
+    const price =
+      event.priceCategories.find((c) => c.id === categoryId)?.price ?? 0;
+
+    const status: "available" | "booked" =
+      seat.status === "AVAILABLE" ? "available" : "booked";
+
+    const sectionSeat: SectionSeat = {
+      id: seat.id,           // real UUID from backend
+      rowLabel,
+      colIndex,
+      status,
+      price,
+      categoryId,
+    };
+
+    if (!rowMap.has(rowLabel)) rowMap.set(rowLabel, []);
+    rowMap.get(rowLabel)!.push(sectionSeat);
+  }
+
+  // Sort seats within each row by column
+  for (const seats of rowMap.values()) {
+    seats.sort((a, b) => a.colIndex - b.colIndex);
+  }
+
+  // Build FullMovieRow array ordered A → L
+  const rows: FullMovieRow[] = [];
+  for (const cat of event.priceCategories) {
+    const rowLabels = MOVIE_ROW_MAP[cat.id] ?? [];
+    for (const rowLabel of rowLabels) {
+      const seats = rowMap.get(rowLabel) ?? [];
+      if (seats.length === 0) continue;
+      rows.push({ rowLabel, categoryId: cat.id, price: cat.price, seats });
+    }
+  }
+  return rows;
+}
 
 export function generateFullMovieRows(event: EventData): FullMovieRow[] {
   const rows: FullMovieRow[] = [];
