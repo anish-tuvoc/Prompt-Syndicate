@@ -47,8 +47,8 @@ export function CategoryAccordion({
             key={cat.id}
             className={`overflow-hidden rounded-xl border transition-colors ${
               isOpen
-                ? "border-brand-500/60 bg-brand-950/40"
-                : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+                ? "border-brand-500/60 bg-brand-50 dark:bg-brand-950/40"
+                : "border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700/50 dark:bg-slate-900/50 dark:hover:border-slate-600"
             }`}
           >
             {/* Category header */}
@@ -62,10 +62,10 @@ export function CategoryAccordion({
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: cat.color }}
                 />
-                <span className="text-sm font-semibold text-slate-100">{cat.label}</span>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{cat.label}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">{formatPrice(cat.price)}</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{formatPrice(cat.price)}</span>
                 <motion.svg
                   animate={{ rotate: isOpen ? 180 : 0 }}
                   transition={{ duration: 0.22, ease: "easeInOut" }}
@@ -88,7 +88,7 @@ export function CategoryAccordion({
                   transition={{ duration: 0.28, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="space-y-1 border-t border-slate-700/50 p-2">
+                  <div className="space-y-1 border-t border-slate-200 p-2 dark:border-slate-700/50">
                     {catSections.map((section) => {
                       const isActive = activeSectionId === section.id;
                       const dotColor = availabilityColor(section.availablePercent);
@@ -103,8 +103,8 @@ export function CategoryAccordion({
                           onClick={() => onSelectSection(section)}
                           className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${
                             isActive
-                              ? "bg-emerald-600/20 ring-1 ring-emerald-500/50"
-                              : "hover:bg-slate-800/80"
+                              ? "bg-emerald-50 ring-1 ring-emerald-500/50 dark:bg-emerald-600/20"
+                              : "hover:bg-slate-100 dark:hover:bg-slate-800/80"
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
@@ -117,7 +117,7 @@ export function CategoryAccordion({
                             </span>
 
                             <div>
-                              <p className={`text-xs font-semibold ${isActive ? "text-emerald-300" : "text-slate-200"}`}>
+                              <p className={`text-xs font-semibold ${isActive ? "text-emerald-600 dark:text-emerald-300" : "text-slate-700 dark:text-slate-200"}`}>
                                 {section.shortLabel}
                               </p>
                               <p className="text-[10px] text-slate-400 line-clamp-1">

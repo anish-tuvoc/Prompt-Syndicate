@@ -36,7 +36,11 @@ const containerVariants = {
 
 const rowVariants = {
   hidden: { opacity: 0, y: -6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  },
 };
 
 export function MovieTheaterLayout({
@@ -64,7 +68,10 @@ export function MovieTheaterLayout({
   useEffect(() => {
     // Smooth scroll to the focus section after initial animations settle
     const scrollTimer = setTimeout(() => {
-      focusRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      focusRowRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     }, 750);
 
     // Remove the initial glow after 3s
@@ -93,7 +100,9 @@ export function MovieTheaterLayout({
   const allSeats = rows.flatMap((r) => r.seats);
   const totalAvail = allSeats.filter((s) => s.status === "available").length;
   const totalBooked = allSeats.filter((s) => s.status === "booked").length;
-  const totalSelected = allSeats.filter((s) => selectedSeatIds.has(s.id)).length;
+  const totalSelected = allSeats.filter((s) =>
+    selectedSeatIds.has(s.id),
+  ).length;
 
   // Track whether we've attached the focusRef for this render pass
   let focusRefAttached = false;
@@ -107,13 +116,14 @@ export function MovieTheaterLayout({
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="space-y-[4px]"
+            className="space-y-[4px] flex flex-col items-center justify-center"
           >
             {displayRows.map((row) => {
               const cat = catMap.get(row.categoryId);
               const absIdx = absRowIdx(row.rowLabel);
               const isDimmedRow =
-                selectedCategoryId !== null && row.categoryId !== selectedCategoryId;
+                selectedCategoryId !== null &&
+                row.categoryId !== selectedCategoryId;
               const catColor = cat?.color ?? "#94a3b8";
 
               // Focus glow: applied when this row belongs to the focus category
@@ -134,7 +144,7 @@ export function MovieTheaterLayout({
                       variants={rowVariants}
                       className="flex items-center gap-2 py-2"
                     >
-                      <div className="h-px flex-1 bg-slate-800" />
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                       <motion.span
                         animate={{ opacity: isDimmedRow ? 0.3 : 1 }}
                         transition={{ duration: 0.25 }}
@@ -147,7 +157,7 @@ export function MovieTheaterLayout({
                       >
                         {cat?.label} · ₹{cat?.price}
                       </motion.span>
-                      <div className="h-px flex-1 bg-slate-800" />
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                     </motion.div>
                   )}
 
@@ -165,9 +175,12 @@ export function MovieTheaterLayout({
                         <motion.div
                           key="glow"
                           initial={{ opacity: 0 }}
-                          animate={{ opacity: [0, 0.18, 0.10, 0.18, 0.08] }}
+                          animate={{ opacity: [0, 0.18, 0.1, 0.18, 0.08] }}
                           exit={{ opacity: 0 }}
-                          transition={{ duration: 2.5, times: [0, 0.3, 0.6, 0.8, 1] }}
+                          transition={{
+                            duration: 2.5,
+                            times: [0, 0.3, 0.6, 0.8, 1],
+                          }}
                           className="pointer-events-none absolute inset-0 -mx-2 rounded-lg"
                           style={{
                             background: `radial-gradient(ellipse at center, ${catColor}40 0%, transparent 70%)`,
@@ -191,7 +204,9 @@ export function MovieTheaterLayout({
                         {row.seats.slice(0, AISLE_AFTER).map((seat) => (
                           <div
                             key={seat.id}
-                            style={{ marginTop: `${seatYOffset(seat.colIndex, absIdx)}px` }}
+                            style={{
+                              marginTop: `${seatYOffset(seat.colIndex, absIdx)}px`,
+                            }}
                           >
                             <Seat
                               seat={seat}
@@ -211,7 +226,9 @@ export function MovieTheaterLayout({
                         {row.seats.slice(AISLE_AFTER).map((seat) => (
                           <div
                             key={seat.id}
-                            style={{ marginTop: `${seatYOffset(seat.colIndex, absIdx)}px` }}
+                            style={{
+                              marginTop: `${seatYOffset(seat.colIndex, absIdx)}px`,
+                            }}
                           >
                             <Seat
                               seat={seat}
@@ -237,8 +254,8 @@ export function MovieTheaterLayout({
             })}
           </motion.div>
 
-          {/* ── Curved screen at BOTTOM ──────────────────────────────────── */}
-          <div className="mt-5">
+          {/* ── Curved screen at BOTTOM — no gap, sits right under row A ── */}
+          <div className="mt-1">
             <TheaterScreen />
           </div>
         </div>
@@ -247,7 +264,7 @@ export function MovieTheaterLayout({
       {/* Legend */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[10px] text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-4 rounded-[2px] border border-slate-600/70 bg-slate-700/80" />
+          <span className="h-3 w-4 rounded-[2px] border border-slate-300 bg-slate-200 dark:border-slate-600/70 dark:bg-slate-700/80" />
           Available ({totalAvail})
         </span>
         <span className="flex items-center gap-1.5">
@@ -259,7 +276,7 @@ export function MovieTheaterLayout({
           Booked ({totalBooked})
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-4 rounded-[2px] border border-slate-700 bg-slate-800 opacity-20" />
+          <span className="h-3 w-4 rounded-[2px] border border-slate-300 bg-slate-200 opacity-20 dark:border-slate-700 dark:bg-slate-800" />
           Other category
         </span>
       </div>
@@ -267,76 +284,86 @@ export function MovieTheaterLayout({
   );
 }
 
-// ── Curved theater screen — positioned at BOTTOM, bows upward toward audience ──
+// ── Curved theater screen — CONCAVE / "inside bend" toward audience ──────────
+// Arc is ∪-shaped: endpoints high (y=8), control point low (y=52).
+// This means the screen center curves AWAY from the audience (inward/concave),
+// which is how real cinema screens look from the audience's perspective.
 function TheaterScreen() {
+  // Shared arc path (∪ — inside bend)
+  const ARC = "M 28,8 Q 310,54 592,8";
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.35, duration: 0.55, ease: "easeOut" }}
     >
       <svg
-        viewBox="0 0 620 68"
+        viewBox="0 0 620 72"
         className="mx-auto w-full max-w-[620px] overflow-visible"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Outermost halo */}
+        <defs>
+          {/* Gradient along the screen curve */}
+          <linearGradient id="screenGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="rgba(109,40,217,0.0)" />
+            <stop offset="20%"  stopColor="rgba(139,92,246,0.7)" />
+            <stop offset="50%"  stopColor="rgba(196,181,253,0.95)" />
+            <stop offset="80%"  stopColor="rgba(139,92,246,0.7)" />
+            <stop offset="100%" stopColor="rgba(109,40,217,0.0)" />
+          </linearGradient>
+        </defs>
+
+        {/* Outermost diffuse halo */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(139,92,246,0.08)"
-          strokeWidth="28"
+          stroke="rgba(109,40,217,0.10)"
+          strokeWidth="32"
           strokeLinecap="round"
         />
-        {/* Wide glow */}
+        {/* Mid glow */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(139,92,246,0.22)"
-          strokeWidth="12"
+          stroke="rgba(139,92,246,0.20)"
+          strokeWidth="14"
           strokeLinecap="round"
         />
         {/* Inner glow */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(167,139,250,0.48)"
-          strokeWidth="4"
+          stroke="rgba(167,139,250,0.42)"
+          strokeWidth="5"
           strokeLinecap="round"
         />
-        {/* Screen surface */}
+        {/* Screen surface — bright white line */}
         <path
-          d="M 45,50 Q 310,20 575,50"
+          d={ARC}
           fill="none"
-          stroke="rgba(255,255,255,0.86)"
+          stroke="rgba(255,255,255,0.88)"
           strokeWidth="2"
           strokeLinecap="round"
         />
-        {/* End caps */}
-        <circle cx="45"  cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
-        <circle cx="575" cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
 
-        {/* "All eyes this way please" text */}
+        {/* End dots */}
+        <circle cx="28"  cy="8" r="3.5" fill="rgba(167,139,250,0.75)" />
+        <circle cx="592" cy="8" r="3.5" fill="rgba(167,139,250,0.75)" />
+
+        {/* "All eyes this way please" — sits INSIDE the curve at center */}
         <text
           x="310"
-          y="64"
+          y="65"
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize="8.5"
           fontWeight="700"
-          letterSpacing="2.5"
-          fill="rgba(255,255,255,0.38)"
+          letterSpacing="3"
+          fill="rgba(196,181,253,0.45)"
         >
           ALL EYES THIS WAY PLEASE
         </text>
-
-        {/* Subtle scan line */}
-        <line
-          x1="185" y1="57"
-          x2="435" y2="57"
-          stroke="rgba(255,255,255,0.07)"
-          strokeWidth="0.5"
-        />
       </svg>
     </motion.div>
   );

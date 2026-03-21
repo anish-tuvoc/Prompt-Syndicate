@@ -149,6 +149,7 @@ export function generateSportsSections(blocks: StadiumBlock[]): SectionData[] {
     categoryId: block.priceId,
     eventType: "sports" as const,
     availablePercent: block.availableSeats / block.totalSeats,
+    angle: (block.startAngle + block.endAngle) / 2, // midpoint angle on the ring
   }));
 }
 

@@ -428,7 +428,7 @@ export function BookingPage() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="flex min-h-screen flex-col bg-slate-950 text-slate-100"
+        className="flex min-h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
       >
         <BookingHeader event={event} selectedCount={selectedCount} onSessionExpire={() => navigate("/")} />
 
@@ -490,8 +490,8 @@ export function BookingPage() {
                               exit={{ opacity: 0, height: 0 }}
                               className="mb-4 overflow-hidden"
                             >
-                              <div className="flex items-center justify-between rounded-xl border border-brand-500/30 bg-brand-950/30 px-4 py-2.5">
-                                <p className="text-xs text-brand-300">
+                              <div className="flex items-center justify-between rounded-xl border border-brand-500/30 bg-brand-50 px-4 py-2.5 dark:bg-brand-950/30">
+                                <p className="text-xs text-brand-700 dark:text-brand-300">
                                   Showing:{" "}
                                   <span className="font-bold">
                                     {event.priceCategories.find(
@@ -506,7 +506,7 @@ export function BookingPage() {
                                   onClick={() =>
                                     handleMovieCategorySelect(null)
                                   }
-                                  className="text-[10px] text-slate-400 hover:text-white transition-colors"
+                                  className="text-[10px] text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                                 >
                                   Clear filter ×
                                 </button>
@@ -614,10 +614,6 @@ export function BookingPage() {
                           </motion.button>
 
                           {/* Orientation badge */}
-                          <span className="flex items-center gap-1 rounded-full bg-emerald-900/30 px-2.5 py-1 text-[10px] font-semibold text-emerald-400 ring-1 ring-emerald-700/50">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Pitch at bottom
-                          </span>
                         </div>
 
                         {/* Section seats */}
