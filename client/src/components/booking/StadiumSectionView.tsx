@@ -193,14 +193,14 @@ export function StadiumSectionView({
   return (
     <div className="flex flex-col items-center gap-3">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex w-full items-center gap-4 rounded-xl bg-slate-800/60 px-4 py-3 ring-1 ring-slate-700/40">
+      <div className="flex w-full items-center gap-4 rounded-xl bg-white px-4 py-3 ring-1 ring-slate-200 dark:bg-slate-800/60 dark:ring-slate-700/40">
         {/* Section info — left */}
         <div className="min-w-0 flex-1">
-          <p className="text-base font-bold text-white">{section.label}</p>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-base font-bold text-slate-900 dark:text-white">{section.label}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
             Row A = nearest pitch · Row H = outer
           </p>
-          <p className="mt-0.5 text-[10px] text-slate-400">
+          <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
             {totalAvail} available &middot; {totalSelected} selected
           </p>
         </div>
@@ -433,7 +433,7 @@ export function StadiumSectionView({
       </div>
 
       {/* ── Legend ── */}
-      <div className="flex flex-wrap items-center justify-center gap-4 text-[10px] text-slate-500">
+      <div className="flex flex-wrap items-center justify-center gap-4 text-[10px] text-slate-500 dark:text-slate-500">
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-2.5 w-2.5 rounded-full"

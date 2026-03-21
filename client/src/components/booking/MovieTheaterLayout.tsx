@@ -144,7 +144,7 @@ export function MovieTheaterLayout({
                       variants={rowVariants}
                       className="flex items-center gap-2 py-2"
                     >
-                      <div className="h-px flex-1 bg-slate-800" />
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                       <motion.span
                         animate={{ opacity: isDimmedRow ? 0.3 : 1 }}
                         transition={{ duration: 0.25 }}
@@ -157,7 +157,7 @@ export function MovieTheaterLayout({
                       >
                         {cat?.label} · ₹{cat?.price}
                       </motion.span>
-                      <div className="h-px flex-1 bg-slate-800" />
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                     </motion.div>
                   )}
 
@@ -264,7 +264,7 @@ export function MovieTheaterLayout({
       {/* Legend */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-[10px] text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-4 rounded-[2px] border border-slate-600/70 bg-slate-700/80" />
+          <span className="h-3 w-4 rounded-[2px] border border-slate-300 bg-slate-200 dark:border-slate-600/70 dark:bg-slate-700/80" />
           Available ({totalAvail})
         </span>
         <span className="flex items-center gap-1.5">
@@ -276,7 +276,7 @@ export function MovieTheaterLayout({
           Booked ({totalBooked})
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-4 rounded-[2px] border border-slate-700 bg-slate-800 opacity-20" />
+          <span className="h-3 w-4 rounded-[2px] border border-slate-300 bg-slate-200 opacity-20 dark:border-slate-700 dark:bg-slate-800" />
           Other category
         </span>
       </div>
