@@ -10,6 +10,9 @@ import { StadiumSectionView } from "../../components/booking/StadiumSectionView"
 import { StadiumLayout } from "../../components/booking/StadiumLayout";
 import { TicketSelector } from "../../components/booking/TicketSelector";
 import { BookingSummary } from "../../components/booking/BookingSummary";
+import { LoginModal } from "../../components/LoginModal";
+import { Toast } from "../../components/Toast";
+import { useAuth } from "../../context/useAuth";
 import {
   generateFullMovieRows,
   generateSportsSections,
@@ -30,8 +33,13 @@ import type { EventData } from "../../data/events";
 export function BookingPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
   const [event, setEvent] = useState<EventData | null>(null);
+
+  // ── Auth gate state ────────────────────────────────────────────────────
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [showAuthToast, setShowAuthToast] = useState(false);
   useEffect(() => {
     if (!id) return;
     getEventByIdFromApi(id).then((ev) => {
@@ -66,6 +74,16 @@ export function BookingPage() {
 
   // ── Success ───────────────────────────────────────────────────────────
   const [isSuccess, setIsSuccess] = useState(false);
+
+  // ── Auth-guarded proceed handler ─────────────────────────────────────
+  const handleProceed = useCallback(() => {
+    if (!isLoggedIn) {
+      setShowAuthToast(true);
+      setIsLoginModalOpen(true);
+      return;
+    }
+    setIsSuccess(true);
+  }, [isLoggedIn]);
 
   // ── Initialise by event type ──────────────────────────────────────────
   useEffect(() => {
@@ -446,7 +464,7 @@ export function BookingPage() {
                         </p>
                         <StadiumLayout
                           blocks={stadiumBlocks}
-                          selectedBlockId={activeSection?.id ?? null}
+                          selectedBlockId={null}
                           highlightTier={activeCategoryId}
                           onSelectBlock={(blockId) =>
                             handleSelectSportsSection(blockId)
@@ -554,7 +572,29 @@ export function BookingPage() {
           selectedSeats={summarySeats}
           tickets={tickets}
           totalPrice={totalPrice}
-          onProceed={() => setIsSuccess(true)}
+          onProceed={handleProceed}
+        />
+
+        {/* ── Auth gate ── */}
+        <Toast
+          isVisible={showAuthToast}
+          message="Sign in required"
+          subMessage="Please log in to confirm your booking."
+          variant="warning"
+          onDismiss={() => setShowAuthToast(false)}
+        />
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          onSuccess={() => {
+            setIsLoginModalOpen(false);
+            setIsSuccess(true);
+          }}
+          contextMessage={
+            selectedCount > 0
+              ? `to confirm your ${selectedCount} ticket${selectedCount === 1 ? "" : "s"}`
+              : `to book ${event.title}`
+          }
         />
       </motion.div>
     </AnimatePresence>

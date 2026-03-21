@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import { EventCard } from "../../components/EventCard";
 import { cardVariants } from "../../components/cardVariants";
+import { LoginModal } from "../../components/LoginModal";
+import { Toast } from "../../components/Toast";
+import { useAuth } from "../../context/useAuth";
 import { getEventByIdFromApi, getRelatedEventsFromApi } from "./service";
 import type { EventData } from "../../data/events";
 
@@ -54,9 +57,30 @@ function InfoPill({ icon, children }: { icon: React.ReactNode; children: React.R
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+
   const [event, setEvent] = useState<EventData | null>(null);
   const [related, setRelated] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ── Auth guard state ───────────────────────────────────────────────────
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [showAuthToast, setShowAuthToast] = useState(false);
+
+  const handleBookTickets = useCallback(() => {
+    if (!event) return;
+    if (!isLoggedIn) {
+      setShowAuthToast(true);
+      setIsLoginModalOpen(true);
+      return;
+    }
+    navigate(`/event/${event.id}/book`);
+  }, [isLoggedIn, event, navigate]);
+
+  const handleLoginSuccess = useCallback(() => {
+    setIsLoginModalOpen(false);
+    if (event) navigate(`/event/${event.id}/book`);
+  }, [event, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -252,7 +276,7 @@ export function EventDetailPage() {
                   type="button"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate(`/event/${event.id}/book`)}
+                  onClick={handleBookTickets}
                   className="mt-6 w-full rounded-xl bg-brand-600 py-3 text-base font-bold text-white shadow-md shadow-brand-600/30 transition hover:bg-brand-500"
                 >
                   {event.type === "movie" ? "Select Seats" : event.type === "sports" ? "Choose Stand" : "Buy Tickets"}
@@ -288,6 +312,20 @@ export function EventDetailPage() {
         </div>
       </motion.div>
 
+      {/* ── Auth gate ── */}
+      <Toast
+        isVisible={showAuthToast}
+        message="Sign in required"
+        subMessage="Please log in to continue booking."
+        variant="warning"
+        onDismiss={() => setShowAuthToast(false)}
+      />
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={handleLoginSuccess}
+        contextMessage={`to book ${event.title}`}
+      />
     </>
   );
 }
