@@ -8,6 +8,34 @@
   }
 
   body {
-    @apply m-0 min-h-screen min-w-[320px] antialiased;
+    @apply m-0 min-h-screen min-w-[320px] antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+  }
+
+  * {
+    @apply scroll-smooth;
+  }
+}
+
+@layer utilities {
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgb(30 41 59) 0%,
+      rgb(51 65 85) 50%,
+      rgb(30 41 59) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  .skeleton-shimmer-light {
+    background: linear-gradient(
+      90deg,
+      rgb(226 232 240) 0%,
+      rgb(241 245 249) 50%,
+      rgb(226 232 240) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
   }
 }
