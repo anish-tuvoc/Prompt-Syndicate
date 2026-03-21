@@ -37,10 +37,16 @@ export function formatPrice(amount: number): string {
 // Rows H–J = Prime Plus (upper-middle)
 // Rows K–L = Recliner (top, most expensive)
 export const MOVIE_ROW_MAP: Record<string, string[]> = {
+  // Legacy/internal IDs
   classic:    ["A", "B", "C"],
   prime:      ["D", "E", "F", "G"],
   prime_plus: ["H", "I", "J"],
   recliner:   ["K", "L"],
+  // API seed IDs (server/app/db/init_db.py)
+  // Front (Rows A–D), Middle (Rows E–H), Rear (Rows I–L)
+  front:      ["A", "B", "C", "D"],
+  middle:     ["E", "F", "G", "H"],
+  rear:       ["I", "J", "K", "L"],
 };
 
 export function generateFullMovieRows(event: EventData): FullMovieRow[] {
