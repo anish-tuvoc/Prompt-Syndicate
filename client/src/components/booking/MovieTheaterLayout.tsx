@@ -36,7 +36,11 @@ const containerVariants = {
 
 const rowVariants = {
   hidden: { opacity: 0, y: -6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+  },
 };
 
 export function MovieTheaterLayout({
@@ -64,7 +68,10 @@ export function MovieTheaterLayout({
   useEffect(() => {
     // Smooth scroll to the focus section after initial animations settle
     const scrollTimer = setTimeout(() => {
-      focusRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      focusRowRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     }, 750);
 
     // Remove the initial glow after 3s
@@ -93,7 +100,9 @@ export function MovieTheaterLayout({
   const allSeats = rows.flatMap((r) => r.seats);
   const totalAvail = allSeats.filter((s) => s.status === "available").length;
   const totalBooked = allSeats.filter((s) => s.status === "booked").length;
-  const totalSelected = allSeats.filter((s) => selectedSeatIds.has(s.id)).length;
+  const totalSelected = allSeats.filter((s) =>
+    selectedSeatIds.has(s.id),
+  ).length;
 
   // Track whether we've attached the focusRef for this render pass
   let focusRefAttached = false;
@@ -107,13 +116,14 @@ export function MovieTheaterLayout({
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="space-y-[4px]"
+            className="space-y-[4px] flex flex-col items-center justify-center"
           >
             {displayRows.map((row) => {
               const cat = catMap.get(row.categoryId);
               const absIdx = absRowIdx(row.rowLabel);
               const isDimmedRow =
-                selectedCategoryId !== null && row.categoryId !== selectedCategoryId;
+                selectedCategoryId !== null &&
+                row.categoryId !== selectedCategoryId;
               const catColor = cat?.color ?? "#94a3b8";
 
               // Focus glow: applied when this row belongs to the focus category
@@ -165,9 +175,12 @@ export function MovieTheaterLayout({
                         <motion.div
                           key="glow"
                           initial={{ opacity: 0 }}
-                          animate={{ opacity: [0, 0.18, 0.10, 0.18, 0.08] }}
+                          animate={{ opacity: [0, 0.18, 0.1, 0.18, 0.08] }}
                           exit={{ opacity: 0 }}
-                          transition={{ duration: 2.5, times: [0, 0.3, 0.6, 0.8, 1] }}
+                          transition={{
+                            duration: 2.5,
+                            times: [0, 0.3, 0.6, 0.8, 1],
+                          }}
                           className="pointer-events-none absolute inset-0 -mx-2 rounded-lg"
                           style={{
                             background: `radial-gradient(ellipse at center, ${catColor}40 0%, transparent 70%)`,
@@ -191,7 +204,9 @@ export function MovieTheaterLayout({
                         {row.seats.slice(0, AISLE_AFTER).map((seat) => (
                           <div
                             key={seat.id}
-                            style={{ marginTop: `${seatYOffset(seat.colIndex, absIdx)}px` }}
+                            style={{
+                              marginTop: `${seatYOffset(seat.colIndex, absIdx)}px`,
+                            }}
                           >
                             <Seat
                               seat={seat}
@@ -211,7 +226,9 @@ export function MovieTheaterLayout({
                         {row.seats.slice(AISLE_AFTER).map((seat) => (
                           <div
                             key={seat.id}
-                            style={{ marginTop: `${seatYOffset(seat.colIndex, absIdx)}px` }}
+                            style={{
+                              marginTop: `${seatYOffset(seat.colIndex, absIdx)}px`,
+                            }}
                           >
                             <Seat
                               seat={seat}
@@ -313,7 +330,7 @@ function TheaterScreen() {
           strokeLinecap="round"
         />
         {/* End caps */}
-        <circle cx="45"  cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
+        <circle cx="45" cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
         <circle cx="575" cy="50" r="3.5" fill="rgba(167,139,250,0.7)" />
 
         {/* "All eyes this way please" text */}
@@ -332,8 +349,10 @@ function TheaterScreen() {
 
         {/* Subtle scan line */}
         <line
-          x1="185" y1="57"
-          x2="435" y2="57"
+          x1="185"
+          y1="57"
+          x2="435"
+          y2="57"
           stroke="rgba(255,255,255,0.07)"
           strokeWidth="0.5"
         />
