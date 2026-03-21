@@ -12,7 +12,61 @@ Hackathon project — March 21, 2026
 |      | Backend / Floater |
 |      | Floater |
 
-## Getting Started
+## Prerequisites
+
+### Install Docker (if not installed)
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+# Log out and back in for group changes to take effect
+```
+
+**macOS:**
+Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+**Windows:**
+Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (requires WSL2)
+
+Verify installation:
+```bash
+docker --version
+docker compose version
+```
+
+## Getting Started (Docker — Recommended)
+
+Run the entire stack (PostgreSQL + FastAPI Backend + React Frontend) with a single command:
+
+```bash
+docker compose up -d --build
+```
+
+That's it. The database auto-creates tables and seeds:
+- 10 sample events
+- Admin user (`username: admin`, `password: admin`)
+
+### Access Points
+
+| Service | URL |
+|---------|-----|
+| Frontend | [http://localhost:5174](http://localhost:5174) |
+| Backend API | [http://localhost:8001](http://localhost:8001) |
+| Swagger Docs | [http://localhost:8001/docs](http://localhost:8001/docs) |
+
+To stop everything:
+```bash
+docker compose down
+```
+
+To stop and wipe all data (fresh start):
+```bash
+docker compose down -v
+```
+
+## Getting Started (Without Docker)
 
 ### Frontend
 
@@ -28,17 +82,19 @@ npm run dev
 
 `npm run typecheck` runs `tsc -b`; `npm run build` runs TypeScript then Vite.
 
-### Backend Setup (Docker)
+### Backend
 
-To run the entire system (PostgreSQL Database, FastAPI Backend, and React Frontend), simply run Docker Compose from the root directory:
+Requires **Python 3.11+** and a running **PostgreSQL** instance.
 
 ```bash
-sudo docker compose up -d --build
+cd server
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
-*Note: The database seamlessly boots up and is automatically seeded with an initial Admin user (`username: admin`, `password: admin`).*
 
-You can view the interactive Swagger API documentation locally at:
-👉 **[http://localhost:8000/docs](http://localhost:8000/docs)**
+Set these environment variables (or use the `.env` file at root):
+- `DATABASE_URL` — PostgreSQL connection string
+- `SECRET_KEY` — JWT signing key
 
 ## API Contract
 
