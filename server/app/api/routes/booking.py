@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timezone
 from uuid import UUID
 from app.db.session import get_db
@@ -7,7 +7,7 @@ from app.models.seat import Seat, SeatStatus
 from app.models.seat_lock import SeatLock
 from app.models.booking import Booking, BookingStatus
 from app.models.booking_seat import BookingSeat
-from app.schemas.booking import BookingRequest, BookingResponse
+from app.schemas.booking import BookingRequest, BookingResponse, UserBookingItem, UserBookingSeatItem
 from app.core.dependencies import get_current_user
 
 router = APIRouter()
@@ -59,3 +59,30 @@ def confirm_booking(request: BookingRequest, db: Session = Depends(get_db), curr
     db.commit()
     db.refresh(new_booking)
     return new_booking
+
+
+@router.get("/me", response_model=list[UserBookingItem])
+def my_bookings(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    bookings = (
+        db.query(Booking)
+        .options(joinedload(Booking.booking_seats).joinedload(BookingSeat.seat))
+        .filter(Booking.user_id == current_user.id)
+        .order_by(Booking.created_at.desc())
+        .all()
+    )
+    return [
+        UserBookingItem(
+            id=booking.id,
+            event_id=booking.event_id,
+            status=booking.status,
+            created_at=booking.created_at,
+            seats=[
+                UserBookingSeatItem(
+                    seat_id=item.seat_id,
+                    seat_number=item.seat.seat_number if item.seat else "N/A",
+                )
+                for item in booking.booking_seats
+            ],
+        )
+        for booking in bookings
+    ]

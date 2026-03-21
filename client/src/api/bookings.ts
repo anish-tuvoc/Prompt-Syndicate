@@ -16,3 +16,20 @@ export function confirmBooking(eventId: string, seatIds: string[]) {
     seat_ids: seatIds,
   });
 }
+
+export interface UserBookingSeatItem {
+  seat_id: string;
+  seat_number: string;
+}
+
+export interface UserBookingItem {
+  id: string;
+  event_id: string;
+  status: BookingStatus;
+  created_at: string;
+  seats: UserBookingSeatItem[];
+}
+
+export function getMyBookings() {
+  return api.get<UserBookingItem[]>('/bookings/me');
+}
