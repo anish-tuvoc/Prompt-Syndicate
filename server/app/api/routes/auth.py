@@ -18,6 +18,7 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)):
             detail="The user with this email already exists in the system.",
         )
     user = User(
+        name=user_in.name,
         email=user_in.email,
         password_hash=get_password_hash(user_in.password),
     )

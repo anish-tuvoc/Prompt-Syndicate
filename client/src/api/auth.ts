@@ -5,8 +5,8 @@ export interface AuthToken {
   token_type: string;
 }
 
-export function signup(email: string, password: string) {
-  return api.post<AuthToken>('/auth/signup', { email, password });
+export function signup(name: string, email: string, password: string) {
+  return api.post<AuthToken>('/auth/signup', { name, email, password });
 }
 
 export function login(email: string, password: string) {

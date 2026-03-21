@@ -12,15 +12,12 @@ interface AuthState {
   isLoggedIn: boolean;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
-  /** Mock login — no backend required. Stores a fake token + user in localStorage. */
-  mockLogin: (email: string, name?: string) => void;
+  signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const TOKEN_KEY = 'token';
 const USER_KEY = 'tickethub_user';
-const MOCK_TOKEN = 'mock_tickethub';
 
 function buildUser(email: string, name?: string): AuthUser {
   const displayName = (name?.trim() || email.split('@')[0]).replace(/[._]/g, ' ');
@@ -66,15 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persistUser(buildUser(email));
   }, []);
 
-  const signup = useCallback(async (email: string, password: string) => {
-    const res = await authApi.signup(email, password);
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    const res = await authApi.signup(name, email, password);
     persistToken(res.access_token);
-    persistUser(buildUser(email));
-  }, []);
-
-  const mockLogin = useCallback((email: string, name?: string) => {
     persistUser(buildUser(email, name));
-    persistToken(MOCK_TOKEN);
   }, []);
 
   const logout = useCallback(() => {
@@ -86,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ token, isLoggedIn: !!token, user, login, signup, mockLogin, logout }}
+      value={{ token, isLoggedIn: !!token, user, login, signup, logout }}
     >
       {children}
     </AuthContext.Provider>

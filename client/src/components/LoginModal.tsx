@@ -6,55 +6,72 @@ interface LoginModalProps {
   isOpen: boolean;
   onSuccess: () => void;
   onClose: () => void;
-  /** Short context line shown under the title, e.g. "to book Coldplay – Music of the Spheres" */
   contextMessage?: string;
 }
 
 export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: LoginModalProps) {
-  const { mockLogin } = useAuth();
+  const { login, signup } = useAuth();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [touched, setTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const emailInvalid =
-    touched && (
-      !email.trim() ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-    );
+    touched && (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()));
+  const passwordInvalid = touched && password.length < 4;
 
   function resetForm() {
     setName("");
     setEmail("");
+    setPassword("");
+    setError("");
     setTouched(false);
     setIsLoading(false);
   }
 
   function handleClose() {
     resetForm();
+    setMode("signin");
     onClose();
   }
 
-  function handleSuccess(email: string, name?: string) {
-    mockLogin(email, name);
-    setIsLoading(false);
+  function toggleMode() {
     resetForm();
-    onSuccess();
+    setMode((m) => (m === "signin" ? "signup" : "signin"));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched(true);
+    setError("");
+
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return;
+    if (password.length < 4) return;
+    if (mode === "signup" && !name.trim()) return;
+
     setIsLoading(true);
-    // Simulate brief network round-trip
-    setTimeout(() => handleSuccess(email.trim(), name.trim() || undefined), 750);
+    try {
+      if (mode === "signin") {
+        await login(email.trim(), password);
+      } else {
+        await signup(name.trim(), email.trim(), password);
+      }
+      resetForm();
+      onSuccess();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setError(msg);
+      setIsLoading(false);
+    }
   }
 
-  function handleGoogleLogin() {
-    setIsLoading(true);
-    setTimeout(() => handleSuccess("user@gmail.com", "Google User"), 500);
-  }
+  const inputClass =
+    "w-full rounded-xl border bg-slate-800/80 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:ring-2 disabled:opacity-50";
+  const validBorder = "border-slate-700/70 focus:border-brand-500 focus:ring-brand-500/20";
+  const errorBorder = "border-red-500/70 focus:border-red-500 focus:ring-red-500/20";
 
   return (
     <AnimatePresence>
@@ -77,11 +94,10 @@ export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: Login
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-[400px] overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/70"
           >
-            {/* Top accent gradient bar */}
             <div className="h-0.5 w-full bg-gradient-to-r from-brand-700 via-brand-400 to-violet-400" />
 
             <div className="p-6">
-              {/* ── Header ──────────────────────────────────────────── */}
+              {/* Header */}
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <div className="mb-1.5 flex items-center gap-2">
@@ -94,7 +110,9 @@ export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: Login
                       Ticket<span className="text-brand-400">Hub</span>
                     </span>
                   </div>
-                  <h2 className="text-[17px] font-bold text-slate-100">Sign in to continue</h2>
+                  <h2 className="text-[17px] font-bold text-slate-100">
+                    {mode === "signin" ? "Sign in to continue" : "Create your account"}
+                  </h2>
                   {contextMessage && (
                     <p className="mt-0.5 line-clamp-2 text-xs text-brand-400">{contextMessage}</p>
                   )}
@@ -112,40 +130,49 @@ export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: Login
                 </button>
               </div>
 
-              {/* ── Google SSO ───────────────────────────────────────── */}
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={handleGoogleLogin}
-                className="mb-4 flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50"
-              >
-                <GoogleSVG />
-                Continue with Google
-              </button>
+              {/* Error banner */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-4 overflow-hidden rounded-lg border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-400"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* ── Divider ──────────────────────────────────────────── */}
-              <div className="my-4 flex items-center gap-3">
-                <div className="h-px flex-1 bg-slate-800" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-600">or</span>
-                <div className="h-px flex-1 bg-slate-800" />
-              </div>
-
-              {/* ── Email form ───────────────────────────────────────── */}
               <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-                {/* Name */}
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Name&nbsp;<span className="font-normal normal-case text-slate-600">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your full name"
-                    disabled={isLoading}
-                    className="w-full rounded-xl border border-slate-700/70 bg-slate-800/80 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50"
-                  />
-                </div>
+                {/* Name — only on signup */}
+                {mode === "signup" && (
+                  <div>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your full name"
+                      disabled={isLoading}
+                      className={`${inputClass} ${touched && !name.trim() ? errorBorder : validBorder}`}
+                    />
+                    <AnimatePresence>
+                      {touched && !name.trim() && (
+                        <motion.p
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-1.5 overflow-hidden text-xs text-red-400"
+                        >
+                          Name is required.
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
 
                 {/* Email */}
                 <div>
@@ -161,12 +188,7 @@ export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: Login
                     autoComplete="email"
                     autoFocus
                     disabled={isLoading}
-                    className={[
-                      "w-full rounded-xl border bg-slate-800/80 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:ring-2 disabled:opacity-50",
-                      emailInvalid
-                        ? "border-red-500/70 focus:border-red-500 focus:ring-red-500/20"
-                        : "border-slate-700/70 focus:border-brand-500 focus:ring-brand-500/20",
-                    ].join(" ")}
+                    className={`${inputClass} ${emailInvalid ? errorBorder : validBorder}`}
                   />
                   <AnimatePresence>
                     {emailInvalid && (
@@ -177,6 +199,34 @@ export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: Login
                         className="mt-1.5 overflow-hidden text-xs text-red-400"
                       >
                         {!email.trim() ? "Email is required." : "Enter a valid email address."}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    disabled={isLoading}
+                    className={`${inputClass} ${passwordInvalid ? errorBorder : validBorder}`}
+                  />
+                  <AnimatePresence>
+                    {passwordInvalid && (
+                      <motion.p
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-1.5 overflow-hidden text-xs text-red-400"
+                      >
+                        Password must be at least 4 characters.
                       </motion.p>
                     )}
                   </AnimatePresence>
@@ -193,33 +243,33 @@ export function LoginModal({ isOpen, onSuccess, onClose, contextMessage }: Login
                   {isLoading ? (
                     <>
                       <SpinnerSVG />
-                      Signing in…
+                      {mode === "signin" ? "Signing in..." : "Creating account..."}
                     </>
+                  ) : mode === "signin" ? (
+                    "Sign In"
                   ) : (
-                    "Continue →"
+                    "Create Account"
                   )}
                 </motion.button>
               </form>
 
-              <p className="mt-4 text-center text-[10px] text-slate-600">
-                Demo app — any email works. No real data is stored.
+              {/* Toggle sign in / sign up */}
+              <p className="mt-4 text-center text-xs text-slate-400">
+                {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  disabled={isLoading}
+                  className="font-semibold text-brand-400 transition hover:text-brand-300 disabled:opacity-50"
+                >
+                  {mode === "signin" ? "Sign Up" : "Sign In"}
+                </button>
               </p>
             </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-function GoogleSVG() {
-  return (
-    <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" aria-hidden>
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
   );
 }
 
