@@ -3,13 +3,18 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const DURATION_SECONDS = 4 * 60;
 
-export function BookingTimer() {
+interface BookingTimerProps {
+  onExpire?: () => void;
+}
+
+export function BookingTimer({ onExpire }: BookingTimerProps) {
   const [remaining, setRemaining] = useState(DURATION_SECONDS);
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
     if (remaining <= 0) {
       setExpired(true);
+      onExpire?.();
       return;
     }
     const id = setInterval(() => setRemaining((prev) => prev - 1), 1000);

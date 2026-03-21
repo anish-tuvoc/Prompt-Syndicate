@@ -35,7 +35,7 @@ export function BookingSummary({
       initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.3, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-700/80 bg-slate-950/95 backdrop-blur-xl"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/95"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         {/* Left: selection details */}
@@ -57,7 +57,7 @@ export function BookingSummary({
                   {selectedSeats.map((s) => (
                     <span
                       key={s.id}
-                      className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300"
+                      className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-600/20 dark:text-emerald-300"
                     >
                       {s.rowLabel}
                       {s.colIndex}
@@ -90,7 +90,7 @@ export function BookingSummary({
                 className="text-right"
               >
                 <p className="text-[10px] text-slate-500">Total</p>
-                <p className="text-lg font-extrabold tracking-tight text-white">
+                <p className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
                   {formatPrice(totalPrice)}
                 </p>
               </motion.div>
@@ -106,7 +106,7 @@ export function BookingSummary({
             className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
               hasSelection && !isLoading
                 ? "bg-brand-500 text-white shadow-[0_0_16px_rgba(139,92,246,0.45)] hover:bg-brand-400"
-                : "cursor-not-allowed bg-slate-800 text-slate-600"
+                : "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
             }`}
           >
             {isLoading ? "Booking..." : "Proceed to Pay"}

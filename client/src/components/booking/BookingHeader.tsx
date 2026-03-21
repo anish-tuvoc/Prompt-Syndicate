@@ -5,9 +5,10 @@ import { BookingTimer } from "./BookingTimer";
 interface BookingHeaderProps {
   event: EventData;
   selectedCount: number;
+  onSessionExpire?: () => void;
 }
 
-export function BookingHeader({ event, selectedCount }: BookingHeaderProps) {
+export function BookingHeader({ event, selectedCount, onSessionExpire }: BookingHeaderProps) {
   const navigate = useNavigate();
 
   const formattedDate = new Date(event.date).toLocaleDateString("en-IN", {
@@ -51,7 +52,7 @@ export function BookingHeader({ event, selectedCount }: BookingHeaderProps) {
               {selectedCount} selected
             </span>
           )}
-          <BookingTimer />
+          <BookingTimer onExpire={onSessionExpire} />
         </div>
       </div>
     </header>

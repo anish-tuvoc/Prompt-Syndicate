@@ -14,6 +14,52 @@
   * {
     @apply scroll-smooth;
   }
+
+  /* ── Custom scrollbar — brand-themed ───────────────────────────────── */
+
+  /* WebKit (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.35);   /* brand-600 @ 35% */
+    border-radius: 9999px;
+    transition: background 0.2s;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.65);   /* brand-500 @ 65% */
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Dark mode — slightly brighter thumb so it stays visible */
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.45);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(167, 139, 250, 0.7);   /* brand-400 */
+  }
+
+  /* Firefox */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+  }
+
+  .dark html,
+  html.dark {
+    scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
+  }
 }
 
 @layer utilities {

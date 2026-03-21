@@ -5,6 +5,7 @@ import { HomePage } from "./pages/HomePage";
 import { BookingPage } from "./pages/BookingPage";
 import { AuthPage } from "./pages/AuthPage";
 import { AdminPage } from "./pages/AdminPage";
+import { BookingHistoryPage } from "./pages/BookingHistoryPage";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/event/:id" element={<EventDetailPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/bookings" element={<BookingHistoryPage />} />
       </Route>
       {/* Booking page has its own full-screen layout */}
       <Route path="/event/:id/book" element={<BookingPage />} />

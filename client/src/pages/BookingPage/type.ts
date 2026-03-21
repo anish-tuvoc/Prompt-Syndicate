@@ -27,6 +27,8 @@ export interface SectionData {
   categoryId: string; // "vip" | "premium" | "standard" | "budget"
   eventType: "sports";
   availablePercent: number; // 0..1
+  /** Midpoint angle of this block on the stadium ring (degrees, 0 = top, clockwise) */
+  angle: number;
 }
 
 // ── Stadium block (for the SVG overview map) ──────────────────────────────

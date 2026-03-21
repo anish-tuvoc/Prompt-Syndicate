@@ -66,15 +66,15 @@ export function MovieCategoryPanel({
       })}
 
       {/* Instructions */}
-      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-3 text-[10px] text-slate-500 space-y-1">
-        <p className="font-semibold text-slate-400">How to book:</p>
+      <div className="mt-4 space-y-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900/40">
+        <p className="font-semibold text-slate-600 dark:text-slate-400">How to book:</p>
         <p>1. Choose a price category above</p>
         <p>2. Click available seats in the layout</p>
         <p>3. Click "Proceed to Pay" below</p>
       </div>
 
       {/* Legend */}
-      <div className="mt-2 space-y-1.5 border-t border-slate-800 pt-3">
+      <div className="mt-2 space-y-1.5 border-t border-slate-200 pt-3 dark:border-slate-800">
         <LegendItem color="bg-slate-600/80 border-slate-500/70" label="Available" />
         <LegendItem color="bg-emerald-500 border-emerald-400" label="Selected" glow />
         <LegendItem color="bg-red-950/60 border-red-900/40 opacity-40" label="Booked" />
@@ -114,7 +114,7 @@ function CategoryButton({
       className={`relative w-full overflow-hidden rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
         isActive
           ? "border-opacity-60 shadow-lg"
-          : "border-slate-700/50 bg-slate-900/50 hover:border-slate-600"
+          : "border-slate-200 bg-white hover:border-slate-400 dark:border-slate-700/50 dark:bg-slate-900/50 dark:hover:border-slate-600"
       }`}
       style={
         isActive
@@ -142,10 +142,10 @@ function CategoryButton({
             className="h-3 w-3 shrink-0 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <span className="text-sm font-semibold text-slate-100">{label}</span>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{label}</span>
         </div>
         {price !== null && (
-          <span className="text-sm font-bold text-white">{formatPrice(price)}</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-white">{formatPrice(price)}</span>
         )}
       </div>
 
