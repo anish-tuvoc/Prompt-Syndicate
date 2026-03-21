@@ -117,6 +117,17 @@ export function Navbar() {
                       <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
                       <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
                     </div>
+                    {/* My Bookings */}
+                    <button
+                      type="button"
+                      onClick={() => { setShowUserMenu(false); navigate("/bookings"); }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 12h18M3 17h18" />
+                      </svg>
+                      My Bookings
+                    </button>
 
                     {/* Logout */}
                     <button

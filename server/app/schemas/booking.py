@@ -16,3 +16,16 @@ class BookingResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class UserBookingSeatItem(BaseModel):
+    seat_id: UUID
+    seat_number: str
+
+
+class UserBookingItem(BaseModel):
+    id: UUID
+    event_id: UUID
+    status: BookingStatus
+    created_at: datetime
+    seats: list[UserBookingSeatItem]
