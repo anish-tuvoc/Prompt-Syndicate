@@ -1,42 +1,59 @@
 import { motion } from "framer-motion";
-import type { MovieSeat } from "../../pages/BookingPage/type";
+import type { SectionSeat } from "../../pages/BookingPage/type";
 
 interface SeatProps {
-  seat: MovieSeat;
+  seat: SectionSeat;
   isSelected: boolean;
+  isDimmed?: boolean; // true when a different category is selected (movie only)
   onToggle: (id: string) => void;
 }
 
-const SECTION_AVAILABLE: Record<string, string> = {
-  front:  "bg-sky-600 border-sky-500 hover:bg-sky-400",
-  middle: "bg-violet-600 border-violet-500 hover:bg-violet-400",
-  rear:   "bg-pink-600 border-pink-500 hover:bg-pink-400",
-};
-
-export function Seat({ seat, isSelected, onToggle }: SeatProps) {
+export function Seat({ seat, isSelected, isDimmed = false, onToggle }: SeatProps) {
   const isBooked = seat.status === "booked";
-
-  const baseClass =
-    "relative flex h-6 w-6 items-end justify-center rounded-t-[4px] border text-[8px] font-bold leading-none pb-0.5 outline-none transition-colors md:h-7 md:w-7";
+  const isDisabled = isBooked || isDimmed;
 
   const stateClass = isBooked
-    ? "cursor-not-allowed border-slate-600 bg-slate-700/70 text-slate-500"
+    ? "cursor-not-allowed bg-red-950/60 border-red-900/40"
+    : isDimmed
+    ? "cursor-not-allowed bg-slate-700/60 border-slate-600/40"
     : isSelected
-      ? "cursor-pointer border-emerald-400 bg-emerald-500 text-white ring-1 ring-emerald-300 ring-offset-1 ring-offset-slate-950"
-      : `cursor-pointer ${SECTION_AVAILABLE[seat.section] ?? "bg-slate-600 border-slate-500"} text-white/80`;
+    ? "cursor-pointer bg-emerald-500 border-emerald-400 ring-1 ring-emerald-300 ring-offset-[2px] ring-offset-slate-950 shadow-[0_0_7px_rgba(52,211,153,0.6)]"
+    : "cursor-pointer bg-slate-600/90 border-slate-500/80 hover:bg-slate-500 hover:border-slate-400";
 
   return (
     <motion.button
       type="button"
-      disabled={isBooked}
-      onClick={() => !isBooked && onToggle(seat.id)}
-      whileHover={!isBooked ? { scale: 1.25, zIndex: 10 } : {}}
-      whileTap={!isBooked ? { scale: 0.9 } : {}}
-      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-      title={isBooked ? "Already booked" : `Seat ${seat.id} — ₹${seat.price}`}
-      className={`${baseClass} ${stateClass}`}
+      disabled={isDisabled}
+      onClick={() => !isDisabled && onToggle(seat.id)}
+      whileHover={!isDisabled ? { scale: 1.32, zIndex: 20 } : {}}
+      whileTap={!isDisabled ? { scale: 0.88 } : {}}
+      animate={isSelected ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+      transition={{ type: "spring", stiffness: 460, damping: 22 }}
+      title={
+        isBooked
+          ? "Already booked"
+          : isDimmed
+          ? "Select this category to book these seats"
+          : `${seat.rowLabel}${seat.colIndex}  ₹${seat.price}`
+      }
+      className={`relative flex h-5 w-6 items-end justify-center rounded-[3px] border pb-px text-[7px] font-bold leading-none text-white/60 outline-none transition-colors duration-150 ${stateClass}`}
     >
-      {seat.col}
+      {/* Seat-back visual bar */}
+      <span className="absolute inset-x-0.5 top-0.5 h-[4px] rounded-t-[2px] bg-current opacity-20" />
+
+      {isBooked ? (
+        <svg
+          className="mb-0.5 h-2.5 w-2.5 opacity-50"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={3}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ) : (
+        seat.colIndex
+      )}
     </motion.button>
   );
 }
