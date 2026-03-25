@@ -9,6 +9,7 @@ from app.models.booking import Booking, BookingStatus
 from app.models.booking_seat import BookingSeat
 from app.schemas.booking import BookingRequest, BookingResponse, UserBookingItem, UserBookingSeatItem
 from app.core.dependencies import get_current_user
+from app.realtime.seats_ws import seats_ws_manager
 
 router = APIRouter()
 
@@ -58,6 +59,14 @@ def confirm_booking(request: BookingRequest, db: Session = Depends(get_db), curr
 
     db.commit()
     db.refresh(new_booking)
+
+    # Notify all connected clients that seats are permanently booked.
+    for seat_id in request.seat_ids:
+        seats_ws_manager.broadcast_sync(
+            request.event_id,
+            {"action": "BOOKED", "seatId": str(seat_id), "bookingId": str(new_booking.id)},
+        )
+
     return new_booking
 
 

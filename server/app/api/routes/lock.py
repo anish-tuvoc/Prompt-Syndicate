@@ -7,9 +7,10 @@ from app.models.seat import Seat, SeatStatus
 from app.models.seat_lock import SeatLock
 from app.schemas.lock import LockRequest, LockResponse
 from app.core.dependencies import get_current_user
+from app.realtime.seats_ws import seats_ws_manager
 
 router = APIRouter()
-LOCK_DURATION_MINUTES = 1
+LOCK_DURATION_MINUTES = 4
 
 @router.post("/", response_model=LockResponse)
 def lock_seat(request: LockRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
@@ -40,6 +41,10 @@ def lock_seat(request: LockRequest, db: Session = Depends(get_db), current_user 
                 existing_lock.expires_at = now + timedelta(minutes=LOCK_DURATION_MINUTES)
                 db.commit()
                 db.refresh(existing_lock)
+                seats_ws_manager.broadcast_sync(
+                    seat.event_id,
+                    {"action": "LOCKED", "seatId": str(seat.id)},
+                )
                 return existing_lock
             else:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Seat is currently locked by another user.")
@@ -61,6 +66,10 @@ def lock_seat(request: LockRequest, db: Session = Depends(get_db), current_user 
     
     db.commit()
     db.refresh(new_lock)
+    seats_ws_manager.broadcast_sync(
+        seat.event_id,
+        {"action": "LOCKED", "seatId": str(seat.id)},
+    )
     return new_lock
 
 
@@ -80,4 +89,9 @@ def unlock_seat(seat_id: UUID, db: Session = Depends(get_db), current_user = Dep
 
     db.delete(lock)
     db.commit()
+    if seat:
+        seats_ws_manager.broadcast_sync(
+            seat.event_id,
+            {"action": "UNLOCKED", "seatId": str(seat.id)},
+        )
     return {"ok": True}

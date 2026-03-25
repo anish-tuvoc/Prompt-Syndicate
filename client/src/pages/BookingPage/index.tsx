@@ -15,14 +15,12 @@ import { Toast } from "../../components/Toast";
 import { useAuth } from "../../context/useAuth";
 import {
   buildMovieRowsFromApi,
-  generateFullMovieRows,
   generateSportsSections,
   generateStadiumBlocks,
   generateTicketCategories,
-  generateSectionSeats,
   formatPrice,
 } from "./service";
-import { getEventSeats, lockSeat, unlockSeat } from "../../api/seats";
+import { getEventSeats, lockSeat, unlockSeat, type SeatResponse } from "../../api/seats";
 import { confirmBooking } from "../../api/bookings";
 import type {
   FullMovieRow,
@@ -65,12 +63,12 @@ export function BookingPage() {
   const [sportsSections, setSportsSections] = useState<SectionData[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SectionData | null>(null);
-  const [sectionSeatsCache, setSectionSeatsCache] = useState<
-    Record<string, SectionSeat[]>
-  >({});
-  const [sportsSelectedSeatIds, setSportsSelectedSeatIds] = useState<
-    Set<string>
-  >(new Set());
+  const [sportsSeatsFromApi, setSportsSeatsFromApi] = useState<SeatResponse[]>(
+    [],
+  );
+  const [sportsSelectedSeatIds, setSportsSelectedSeatIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // ── EVENT / CONCERT state ─────────────────────────────────────────────
   const [tickets, setTickets] = useState<EventTicketCategory[]>([]);
@@ -84,6 +82,10 @@ export function BookingPage() {
   // ── Fetch movie seats from API ─────────────────────────────────────
   const movieSelectedSeatIdsRef = useRef(movieSelectedSeatIds);
   movieSelectedSeatIdsRef.current = movieSelectedSeatIds;
+
+  // Sports: used for expiry cleanup without recreating polling intervals.
+  const sportsSelectedSeatIdsRef = useRef(sportsSelectedSeatIds);
+  sportsSelectedSeatIdsRef.current = sportsSelectedSeatIds;
 
   const fetchMovieSeats = useCallback(async () => {
     if (!event || event.type !== "movie") return;
@@ -120,6 +122,77 @@ export function BookingPage() {
     return () => clearInterval(interval);
   }, [event, fetchMovieSeats]);
 
+  // ── Fetch + poll sports seats (real locks live in backend) ─────────
+  const parseSportsSeatIndex = (seatNumber: string): number => {
+    // sports seat_number: "S####"
+    const digits = seatNumber.replace(/\D/g, "");
+    return parseInt(digits || "0", 10);
+  };
+
+  const fetchSportsSeats = useCallback(async () => {
+    if (!event || event.type !== "sports") return;
+    try {
+      const seats = await getEventSeats(event.id);
+      const sorted = [...seats].sort(
+        (a, b) => parseSportsSeatIndex(a.seat_number) - parseSportsSeatIndex(b.seat_number),
+      );
+
+      // Auto-deselect seats whose locks expired (status reverted to AVAILABLE)
+      const selected = sportsSelectedSeatIdsRef.current;
+      if (selected.size > 0) {
+        const seatMap = new Map(sorted.map((s) => [s.id, s]));
+        const expired: string[] = [];
+        for (const id of selected) {
+          const s = seatMap.get(id);
+          if (s && s.status === "AVAILABLE") expired.push(id);
+        }
+        if (expired.length > 0) {
+          setSportsSelectedSeatIds((prev) => {
+            const next = new Set(prev);
+            for (const id of expired) next.delete(id);
+            return next;
+          });
+        }
+      }
+
+      setSportsSeatsFromApi(sorted);
+    } catch {
+      // ignore (keep last state)
+    }
+  }, [event]);
+
+  useEffect(() => {
+    if (!event || event.type !== "sports") return;
+    fetchSportsSeats();
+    const interval = setInterval(fetchSportsSeats, 3000);
+    return () => clearInterval(interval);
+  }, [event, fetchSportsSeats]);
+
+  // ── Real-time seat updates (WebSocket) ─────────────────────────────────
+  useEffect(() => {
+    if (!event || (event.type !== "movie" && event.type !== "sports")) return;
+
+    const wsBase =
+      import.meta.env.VITE_API_URL?.toString() ?? "http://localhost:8000";
+    const wsUrlBase = wsBase.replace(/^http/, "ws");
+    const wsUrl = `${wsUrlBase}/api/ws/seats/${event.id}`;
+
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = () => {
+      // Refresh seat status immediately when someone locks/unlocks/bookeds.
+      fetchMovieSeats();
+      fetchSportsSeats();
+    };
+
+    return () => {
+      try {
+        ws.close();
+      } catch {
+        // ignore
+      }
+    };
+  }, [event?.id, event?.type, fetchMovieSeats, fetchSportsSeats]);
+
   // ── Auth-guarded proceed handler — seats already locked, just confirm ──
   const handleProceed = useCallback(async () => {
     if (!isLoggedIn) {
@@ -145,16 +218,51 @@ export function BookingPage() {
         setIsSuccess(true);
       } catch (err) {
         setBookingError(err instanceof Error ? err.message : "Booking failed. Please try again.");
+        // Payment/confirmation failed -> release locks best-effort.
+        for (const seatId of selectedIds) {
+          try {
+            await unlockSeat(seatId);
+          } catch {
+            // ignore
+          }
+        }
         // Refresh seats to show updated state
         fetchMovieSeats();
       } finally {
         setIsBooking(false);
       }
+    } else if (event.type === "sports") {
+      // Sports
+      const selectedIds = Array.from(sportsSelectedSeatIdsRef.current);
+      if (selectedIds.length === 0) return;
+
+      setIsBooking(true);
+      setBookingError("");
+      try {
+        // Re-lock to extend expiry before confirming
+        for (const seatId of selectedIds) {
+          await lockSeat(seatId);
+        }
+        await confirmBooking(event.id, selectedIds);
+        setIsSuccess(true);
+      } catch (err) {
+        setBookingError(err instanceof Error ? err.message : "Booking failed. Please try again.");
+        for (const seatId of selectedIds) {
+          try {
+            await unlockSeat(seatId);
+          } catch {
+            // ignore
+          }
+        }
+        fetchSportsSeats();
+      } finally {
+        setIsBooking(false);
+      }
     } else {
-      // Sports / event — keep existing mock behavior
+      // Event / concert (mock ticket flow)
       setIsSuccess(true);
     }
-  }, [isLoggedIn, event, movieSelectedSeatIds, fetchMovieSeats]);
+  }, [isLoggedIn, event, movieSelectedSeatIds, fetchMovieSeats, fetchSportsSeats]);
 
   // ── Initialise by event type ──────────────────────────────────────────
   useEffect(() => {
@@ -173,31 +281,109 @@ export function BookingPage() {
     }
   }, [event]);
 
-  // ── Lazy-load section seats for sports when a section is activated ────
-  useEffect(() => {
-    if (!activeSection || !event) return;
-    if (sectionSeatsCache[activeSection.id]) return;
+  // ── SPORTS seat mapping constants ───────────────────────────────────────
+  const SPORTS_ROW_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
+  const SPORTS_ROW_SEAT_COUNTS = [8, 9, 10, 11, 12, 13, 14, 15] as const;
+  const SPORTS_SEATS_PER_BLOCK = SPORTS_ROW_SEAT_COUNTS.reduce((a, b) => a + b, 0);
+
+  const currentSectionSeats: SectionSeat[] = useMemo(() => {
+    if (!event || !activeSection) return [];
+    if (!sportsSeatsFromApi || sportsSeatsFromApi.length === 0) return [];
+
+    const blockIndex = stadiumBlocks.findIndex((b) => b.id === activeSection.id);
+    if (blockIndex < 0) return [];
+
+    const start = blockIndex * SPORTS_SEATS_PER_BLOCK;
+    const end = start + SPORTS_SEATS_PER_BLOCK;
+    const blockSeats = sportsSeatsFromApi.slice(start, end);
+
     const price =
-      event.priceCategories.find((c) => c.id === activeSection.categoryId)
-        ?.price ?? 0;
-    const seats = generateSectionSeats(activeSection, price, event.id);
-    setSectionSeatsCache((prev) => ({ ...prev, [activeSection.id]: seats }));
-  }, [activeSection, event, sectionSeatsCache]);
+      event.priceCategories.find((c) => c.id === activeSection.categoryId)?.price ?? 0;
 
-  // ── Derived values ────────────────────────────────────────────────────
-  const currentSectionSeats: SectionSeat[] = activeSection
-    ? (sectionSeatsCache[activeSection.id] ?? [])
-    : [];
+    // Map backend seat index → row/col positions expected by StadiumSectionView.
+    const sectionSeats: SectionSeat[] = [];
+    let cursor = 0;
+    for (let rowIdx = 0; rowIdx < SPORTS_ROW_SEAT_COUNTS.length; rowIdx++) {
+      const rowLabel = SPORTS_ROW_LABELS[rowIdx];
+      const seatCount = SPORTS_ROW_SEAT_COUNTS[rowIdx];
 
-  const allCachedSportsSeats = useMemo(
-    () => Object.values(sectionSeatsCache).flat(),
-    [sectionSeatsCache],
-  );
+      for (let col = 1; col <= seatCount; col++) {
+        const seat = blockSeats[cursor];
+        cursor += 1;
+        if (!seat) continue;
 
-  const sportsSelectedSeats = useMemo(
-    () => allCachedSportsSeats.filter((s) => sportsSelectedSeatIds.has(s.id)),
-    [allCachedSportsSeats, sportsSelectedSeatIds],
-  );
+        const isSelected = sportsSelectedSeatIds.has(seat.id);
+        sectionSeats.push({
+          id: seat.id,
+          rowLabel,
+          colIndex: col,
+            status:
+              seat.status === "AVAILABLE" ||
+              (isSelected && seat.status === "LOCKED")
+                ? "available"
+                : "booked",
+          price,
+          categoryId: activeSection.categoryId,
+        });
+      }
+    }
+
+    return sectionSeats;
+  }, [
+    event,
+    activeSection,
+    sportsSeatsFromApi,
+    stadiumBlocks,
+    sportsSelectedSeatIds,
+    SPORTS_SEATS_PER_BLOCK,
+  ]);
+
+  const sportsSelectedSeats = useMemo(() => {
+    if (!event || sportsSeatsFromApi.length === 0) return [];
+    if (sportsSelectedSeatIds.size === 0) return [];
+
+    const idSet = sportsSelectedSeatIds;
+    const selectedSeats: SectionSeat[] = [];
+
+    for (let seatIndex = 0; seatIndex < sportsSeatsFromApi.length; seatIndex++) {
+      const seat = sportsSeatsFromApi[seatIndex];
+      if (!idSet.has(seat.id)) continue;
+
+      const blockIndex = Math.floor(seatIndex / SPORTS_SEATS_PER_BLOCK);
+      const withinBlock = seatIndex % SPORTS_SEATS_PER_BLOCK;
+      const block = stadiumBlocks[blockIndex];
+      if (!block) continue;
+
+      // Convert within-block offset → (rowIdx, colIndex)
+      let rem = withinBlock;
+      let rowIdx = 0;
+      for (; rowIdx < SPORTS_ROW_SEAT_COUNTS.length; rowIdx++) {
+        const cnt = SPORTS_ROW_SEAT_COUNTS[rowIdx];
+        if (rem < cnt) break;
+        rem -= cnt;
+      }
+
+      const rowLabel = SPORTS_ROW_LABELS[rowIdx] ?? "A";
+      const colIndex = rem + 1;
+
+      selectedSeats.push({
+        id: seat.id,
+        rowLabel,
+        colIndex,
+        status: "available",
+        price: block.price,
+        categoryId: block.priceId,
+      });
+    }
+
+    return selectedSeats;
+  }, [
+    event,
+    sportsSeatsFromApi,
+    sportsSelectedSeatIds,
+    stadiumBlocks,
+    SPORTS_SEATS_PER_BLOCK,
+  ]);
 
   const movieSelectedSeats = useMemo(
     () =>
@@ -309,14 +495,49 @@ export function BookingPage() {
     [sportsSections],
   );
 
-  const handleToggleSportsSeat = useCallback((seatId: string) => {
-    setSportsSelectedSeatIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(seatId)) next.delete(seatId);
-      else next.add(seatId);
-      return next;
-    });
-  }, []);
+  const handleToggleSportsSeat = useCallback(
+    async (seatId: string) => {
+      if (lockingInProgress) return;
+
+      const isCurrentlySelected = sportsSelectedSeatIdsRef.current.has(seatId);
+
+      if (!isLoggedIn) {
+        setShowAuthToast(true);
+        setIsLoginModalOpen(true);
+        return;
+      }
+
+      setLockingInProgress(true);
+      try {
+        if (isCurrentlySelected) {
+          await unlockSeat(seatId);
+          setSportsSelectedSeatIds((prev) => {
+            const next = new Set(prev);
+            next.delete(seatId);
+            return next;
+          });
+        } else {
+          await lockSeat(seatId);
+          setSportsSelectedSeatIds((prev) => {
+            const next = new Set(prev);
+            next.add(seatId);
+            return next;
+          });
+        }
+
+        // Refresh to update statuses for this user's selection.
+        await fetchSportsSeats();
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Could not lock seat";
+        setBookingError(msg);
+        await fetchSportsSeats();
+      } finally {
+        setLockingInProgress(false);
+      }
+    },
+    [lockingInProgress, isLoggedIn, fetchSportsSeats],
+  );
 
   const handleTicketUpdate = useCallback((ticketId: string, delta: number) => {
     setTickets((prev) =>
@@ -430,7 +651,33 @@ export function BookingPage() {
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="flex min-h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
       >
-        <BookingHeader event={event} selectedCount={selectedCount} onSessionExpire={() => navigate("/")} />
+        <BookingHeader
+          event={event}
+          selectedCount={selectedCount}
+          onSessionExpire={() => {
+            void (async () => {
+              try {
+                // Best-effort unlock on timeout so other users can proceed immediately.
+                for (const seatId of movieSelectedSeatIdsRef.current) {
+                  try {
+                    await unlockSeat(seatId);
+                  } catch {
+                    // ignore
+                  }
+                }
+                for (const seatId of sportsSelectedSeatIdsRef.current) {
+                  try {
+                    await unlockSeat(seatId);
+                  } catch {
+                    // ignore
+                  }
+                }
+              } finally {
+                navigate("/");
+              }
+            })();
+          }}
+        />
 
         <div className="flex-1 overflow-auto pb-28">
           <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">

@@ -283,17 +283,30 @@ def init_db(db: Session) -> None:
 
     # 4. Ensure seats exist for each event
     # Movies get row-column seats (A1–L14), others get sequential (S001, S002...)
+    #
+    # NOTE: Your React "sports" stadium UI assumes a fixed arc layout:
+    # - blocks: 6 vip + 8 premium + 10 standard + 10 budget = 34 blocks
+    # - rows per block: A..H with seat counts [8,9,10,11,12,13,14,15] = 96 seats per block
+    # So total sports seats must be 34 * 96 = 3264 for the UI mapping to align.
     MOVIE_ROWS = list("ABCDEFGHIJKL")  # 12 rows
     MOVIE_COLS = 14  # 14 seats per row = 168 total
+    SPORTS_BLOCKS = 6 + 8 + 10 + 10
+    SPORTS_SEATS_PER_BLOCK = 8 + 9 + 10 + 11 + 12 + 13 + 14 + 15
+    SPORTS_TOTAL_SEATS = SPORTS_BLOCKS * SPORTS_SEATS_PER_BLOCK
 
     events = db.query(Event).all()
     seats_created = 0
     for event in events:
         existing = db.query(Seat).filter(Seat.event_id == event.id).count()
-        if existing > 0:
-            continue
 
         if event.event_type == "movie":
+            # For movies we always use the fixed 12x14 layout.
+            desired_total = len(MOVIE_ROWS) * MOVIE_COLS
+            if existing > 0:
+                # If already seeded, don't re-create.
+                # (Movie layout is deterministic; existing DB is assumed correct.)
+                continue
+
             for row in MOVIE_ROWS:
                 for col in range(1, MOVIE_COLS + 1):
                     db.add(
@@ -305,16 +318,24 @@ def init_db(db: Session) -> None:
                     )
                     seats_created += 1
         else:
-            total = max(1, event.total_seats or 0)
-            for index in range(1, total + 1):
-                db.add(
-                    Seat(
-                        event_id=event.id,
-                        seat_number=f"S{index:03d}",
-                        status=SeatStatus.AVAILABLE,
+            desired_total = SPORTS_TOTAL_SEATS if event.event_type == "sports" else max(1, event.total_seats or 0)
+
+            # Top-up seats for sports events so the stadium UI mapping can align.
+            # For other event types, keep the original behavior: do not modify existing seats.
+            if existing > 0 and event.event_type != "sports":
+                continue
+
+            # If seats exist (e.g. after an earlier seed) we only add what's missing.
+            if existing < desired_total:
+                for index in range(existing + 1, desired_total + 1):
+                    db.add(
+                        Seat(
+                            event_id=event.id,
+                            seat_number=f"S{index:04d}",
+                            status=SeatStatus.AVAILABLE,
+                        )
                     )
-                )
-                seats_created += 1
+                    seats_created += 1
     if seats_created > 0:
         db.commit()
         logger.info(f"Seeded {seats_created} seats across events.")
